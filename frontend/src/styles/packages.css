@@ -1,0 +1,379 @@
+.packages-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 80vh;
+}
+
+/* Place Details Section */
+.place-details-section {
+  margin-bottom: 40px;
+}
+
+.place-details-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.place-details-image {
+  position: relative;
+  height: 300px;
+  overflow: hidden;
+}
+
+.place-details-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.place-rating-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 107, 107, 0.9);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  backdrop-filter: blur(10px);
+}
+
+.place-details-content {
+  padding: 30px;
+}
+
+.place-details-content h2 {
+  font-size: 2.2rem;
+  color: #333;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.place-country {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.place-description {
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 25px;
+  font-size: 1.1rem;
+}
+
+.place-stats {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #777;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.packages-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.packages-header h1 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.packages-header p {
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.packages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.package-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.package-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.package-image {
+  position: relative;
+  height: 250px;
+  overflow: hidden;
+}
+
+.package-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.package-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #ff6b6b;
+  color: white;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.package-content {
+  padding: 25px;
+}
+
+.package-title {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.package-description {
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.package-details {
+  margin-bottom: 20px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #555;
+}
+
+.detail-value {
+  color: #333;
+}
+
+.package-price {
+  text-align: center;
+  margin: 25px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  color: white;
+}
+
+.price {
+  font-size: 2rem;
+  font-weight: bold;
+  display: block;
+}
+
+.price-note {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.package-services,
+.package-places,
+.package-itinerary {
+  margin-bottom: 20px;
+}
+
+.package-services h4,
+.package-places h4,
+.package-itinerary h4 {
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.package-services ul,
+.package-places ul {
+  list-style: none;
+  padding: 0;
+}
+
+.package-services li,
+.package-places li {
+  padding: 5px 0;
+  color: #555;
+  position: relative;
+  padding-left: 20px;
+}
+
+.package-services li:before,
+.package-places li:before {
+  content: "✓";
+  color: #4CAF50;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.itinerary-content {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.itinerary-day {
+  margin-bottom: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.itinerary-day:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.book-now-btn {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.book-now-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+}
+
+.no-packages {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.no-packages h2 {
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.no-packages p {
+  color: #999;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.retry-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.retry-btn:hover {
+  background: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .packages-container {
+    padding: 15px;
+  }
+
+  .place-details-card {
+    flex-direction: column;
+  }
+
+  .place-details-image {
+    height: 200px;
+  }
+
+  .place-details-content {
+    padding: 20px;
+  }
+
+  .place-details-content h2 {
+    font-size: 1.8rem;
+  }
+
+  .place-description {
+    font-size: 1rem;
+  }
+
+  .place-stats {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .packages-header h1 {
+    font-size: 2rem;
+  }
+
+  .packages-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .package-content {
+    padding: 20px;
+  }
+
+  .package-title {
+    font-size: 1.3rem;
+  }
+
+  .price {
+    font-size: 1.5rem;
+  }
+}
