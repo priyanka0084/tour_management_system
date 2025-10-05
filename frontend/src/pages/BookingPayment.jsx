@@ -1,18 +1,15 @@
-// BookingPayment.jsx
+// BookingPayment.jsx - CLEANED VERSION (All Bookings Removed)
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../styles/BookingPayment.css";
 import DestinationSearch from "../components/DestinationSearch";
 import config from '../config';
-/*
-const [insights, setInsights] = useState("");
-const [itinerary, setItinerary] = useState("");
-const [loadingInsights, setLoadingInsights] = useState(false);
-const [loadingItinerary, setLoadingItinerary] = useState(false);
-const PRICE_PER_PASSENGER = 100; // adjust if different
-*/
+
+const PRICE_PER_PASSENGER = 100;
 
 const BookingPayment = () => {
+  const navigate = useNavigate();
+  
   // ---------------- Booking Form State ----------------
   const [formData, setFormData] = useState({
     name: "",
@@ -25,24 +22,12 @@ const BookingPayment = () => {
     children: 0,
     infants: 0,
     special_requests: "",
-    billing_first_name: "",
-    billing_last_name: "",
-    billing_company: "",
-    billing_country: "India",
-    billing_address: "",
-    billing_apartment: "",
-    billing_city: "",
-    billing_state: "Tamil Nadu",
-    billing_pin: "",
-    billing_phone: "",
-    billing_email: "",
-    billing_notes: "",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [bookingId, setBookingId] = useState(null);
-  const [currentView, setCurrentView] = useState("booking"); // 'booking', 'payment', 'viewBookings'
+  const [currentView, setCurrentView] = useState("booking"); // 'booking' or 'payment'
 
   // ---------------- Payment / Billing State ----------------
   const [paymentData, setPaymentData] = useState({
@@ -69,12 +54,7 @@ const BookingPayment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // ---------------- Passengers State ----------------
-  const [passengers, setPassengers] = useState([]); // array of {first_name,last_name,email,dob,gender}
-
-  // ---------------- Booking List State ----------------
-  const [bookings, setBookings] = useState([]);
-  const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState("");
+  const [passengers, setPassengers] = useState([]);
 
   // ---------------- Helpers ----------------
   const parseIntSafe = (v) => {
@@ -82,10 +62,7 @@ const BookingPayment = () => {
     return Number.isNaN(n) ? 0 : n;
   };
 
-  const totalPassengers =
-    parseIntSafe(formData.adults) +
-    parseIntSafe(formData.children) +
-    parseIntSafe(formData.infants);
+  const totalPassengers = parseIntSafe(formData.adults) + parseIntSafe(formData.children) + parseIntSafe(formData.infants);
 
   const getTomorrowDate = () => {
     const tomorrow = new Date();
@@ -93,74 +70,17 @@ const BookingPayment = () => {
     return tomorrow.toISOString().split("T")[0];
   };
 
-  const formatDate = (dateString) =>
-    new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  const formatDateTime = (dateString) =>
-    new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-GB");
+  };
 
-    
-  // ---------------- Sync passengers when moving to payment or counts change ----------------
+  // Update passengers array when total count changes
   useEffect(() => {
-    // Only fetch if the modal is open and we have a destination
-    if (isInsightsModalOpen && formData.tour_destination) {
-        // Reset previous data
-        setItinerary(""); 
-        
-        const fetchInsights = async () => {
-            setLoadingInsights(true);
-            try {
-                const response = await fetch('/api/gemini/insights', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ destination: formData.tour_destination }),
-                });
-                const data = await response.json();
-                setInsights(data.insights);
-            } catch (err) {
-                setInsights('Could not load insights. Please try again.');
-            } finally {
-                setLoadingInsights(false);
-            }
-        };
-
-        fetchInsights();
-    }
-}, [isInsightsModalOpen, formData.tour_destination]);
-
-
-// Add this function to handle itinerary generation
-const handleGenerateItinerary = async () => {
-    setLoadingItinerary(true);
-    try {
-        const response = await fetch('/api/gemini/itinerary', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ destination: formData.tour_destination }), // You can pass more details like duration if needed
-        });
-        const data = await response.json();
-        setItinerary(data.itinerary); // Expecting HTML content from the backend
-    } catch (err) {
-        setItinerary('<p>Sorry, the itinerary could not be generated.</p>');
-    } finally {
-        setLoadingItinerary(false);
-    }
-};
-  useEffect(() => {
+    const total = totalPassengers;
     setPassengers((prev) => {
-      const total = totalPassengers;
       const next = [...prev];
-
-      // if more needed, push empty passenger objects
       while (next.length < total) {
         next.push({
           first_name: "",
@@ -170,42 +90,35 @@ const handleGenerateItinerary = async () => {
           gender: "",
         });
       }
-      // if less needed, slice
       if (next.length > total) {
         return next.slice(0, total);
       }
       return next;
     });
-  }, [totalPassengers]);  // recalc when counts change or when view enters payment
+  }, [totalPassengers]);
 
   // ---------------- Input handlers ----------------
   const handleInputChange = (e) => {
-  const { name, value } = e.target;
+    const { name, value } = e.target;
 
-  if (name === "phone") {
-    // Remove all non-digit characters except "+"
-    let cleaned = value.replace(/[^\d+]/g, "");
-
-    // Ensure only one "+" at the start
-    if (cleaned.startsWith("+")) {
-      cleaned = "+" + cleaned.slice(1).replace(/\+/g, "");
-    }
-
-    // Format as +CC XXX XXX XXXX
-    const match = cleaned.match(/^(\+\d{1,3})(\d{0,3})(\d{0,3})(\d{0,4})$/);
-    if (match) {
-      const formatted = [match[1], match[2], match[3], match[4]]
-        .filter(Boolean)
-        .join(" ");
-      setFormData({ ...formData, phone: formatted });
+    if (name === "phone") {
+      let cleaned = value.replace(/[^\d+]/g, "");
+      if (cleaned.startsWith("+")) {
+        cleaned = "+" + cleaned.slice(1).replace(/\+/g, "");
+      }
+      const match = cleaned.match(/^(\+\d{1,3})(\d{0,3})(\d{0,3})(\d{0,4})$/);
+      if (match) {
+        const formatted = [match[1], match[2], match[3], match[4]]
+          .filter(Boolean)
+          .join(" ");
+        setFormData({ ...formData, phone: formatted });
+      } else {
+        setFormData({ ...formData, phone: cleaned });
+      }
     } else {
-      setFormData({ ...formData, phone: cleaned });
+      setFormData({ ...formData, [name]: value });
     }
-  } else {
-    setFormData({ ...formData, [name]: value });
-  }
-};
-
+  };
 
   const handlePaymentChange = (e) => {
     const { name, value } = e.target;
@@ -227,64 +140,48 @@ const handleGenerateItinerary = async () => {
 
   // ---------------- Validation ----------------
   const validateBookingForm = () => {
-  const newErrors = {};
+    const newErrors = {};
 
-  // Name validation
-  if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.name.trim()) newErrors.name = "Name is required";
 
-  // Email validation
-  if (!formData.email.trim()) {
-    newErrors.email = "Email is required";
-  } else {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
-    if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Enter a valid email address";
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = "Enter a valid email address";
+      }
     }
-  }
 
-  // Phone validation (with country code + 10 digits)
-  // Phone validation (country code + 10-digit local number)
-if (!formData.phone.trim()) {
-  newErrors.phone = "Phone is required";
-} else {
-  // Remove all non-digit characters except "+"
-  const digitsOnly = formData.phone.replace(/[^\d+]/g, "");
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone is required";
+    } else {
+      const digitsOnly = formData.phone.replace(/[^\d+]/g, "");
+      const phoneRegex = /^\+(\d{1,3})(\d{10})$/;
+      if (!phoneRegex.test(digitsOnly)) {
+        newErrors.phone = "Enter a valid phone number with country code (1-3 digits) and 10-digit number";
+      }
+    }
 
-  // Match + followed by 1–3 country code digits, then 10 local digits
-  const phoneRegex = /^\+(\d{1,3})(\d{10})$/;
+    if (!formData.tour_destination) newErrors.tour_destination = "Select destination";
 
-  if (!phoneRegex.test(digitsOnly)) {
-    newErrors.phone = "Enter a valid phone number with country code (1-3 digits) and 10-digit number";
-  }
-}
+    if (!formData.tour_date) {
+      newErrors.tour_date = "Tour date is required";
+    } else {
+      const selectedDate = new Date(formData.tour_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (selectedDate < today) newErrors.tour_date = "Tour date cannot be in the past";
+    }
 
+    if (parseIntSafe(formData.adults) < 1) newErrors.adults = "At least 1 adult required";
+    if (totalPassengers > 50) newErrors.adults = "Maximum 50 passengers allowed in total";
 
-  // Tour destination validation
-  if (!formData.tour_destination) newErrors.tour_destination = "Select destination";
-
-  // Tour date validation
-  if (!formData.tour_date) {
-    newErrors.tour_date = "Tour date is required";
-  } else {
-    const selectedDate = new Date(formData.tour_date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) newErrors.tour_date = "Tour date cannot be in the past";
-  }
-
-  // Adults validation
-  if (parseIntSafe(formData.adults) < 1) newErrors.adults = "At least 1 adult required";
-
-  // Total passengers validation
-  if (totalPassengers > 50) newErrors.adults = "Maximum 50 passengers allowed in total";
-
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-};
-
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const validatePaymentAndPassengers = () => {
-    // billing basic checks
     const problems = [];
     if (!billing.first_name.trim()) problems.push("Billing first name required");
     if (!billing.last_name.trim()) problems.push("Billing last name required");
@@ -293,7 +190,7 @@ if (!formData.phone.trim()) {
     if (!billing.pin_code.trim()) problems.push("Billing PIN code required");
     if (!billing.phone.trim()) problems.push("Billing phone required");
     if (!billing.email.trim()) problems.push("Billing email required");
-    // passenger checks
+    
     passengers.forEach((p, idx) => {
       if (!p.first_name || !p.last_name) problems.push(`Passenger ${idx + 1}: first & last name required`);
       if (!p.dob) problems.push(`Passenger ${idx + 1}: date of birth required`);
@@ -328,11 +225,9 @@ if (!formData.phone.trim()) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      const bookingId = data.bookingId;
       if (data.success && data.bookingId) {
         setSuccessMessage("Booking created. Proceed to payment.");
         setBookingId(data.bookingId);
-        // go to payment view
         setCurrentView("payment");
       } else {
         setErrors({ submit: data.error || "Failed to create booking" });
@@ -345,28 +240,30 @@ if (!formData.phone.trim()) {
   };
 
   const handlePayment = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const problems = validatePaymentAndPassengers();
-  if (problems.length > 0) {
-    setPaymentStatus("❌ " + problems.join("; "));
-    return;
-  }
+    const problems = validatePaymentAndPassengers();
+    if (problems.length > 0) {
+      setPaymentStatus("❌ " + problems.join("; "));
+      return;
+    }
 
-  setIsProcessing(true);
-  setPaymentStatus("");
+    setIsProcessing(true);
+    setPaymentStatus("");
 
-  try {
-    const amount = totalPassengers * PRICE_PER_PASSENGER;
+    try {
+      const amount = totalPassengers * PRICE_PER_PASSENGER;
 
-    const payload = {
-      bookingId,
-      amount,
-      cardNumber: paymentData.cardNumber,
-      expiry: paymentData.expiry,
-      cvv: paymentData.cvv,
-      method: paymentData.method,
-    };
+      const payload = {
+        bookingId,
+        amount,
+        cardNumber: paymentData.cardNumber,
+        expiry: paymentData.expiry,
+        cvv: paymentData.cvv,
+        method: paymentData.method,
+        billing: billing,  // Send billing details
+        passengers: passengers  // Send passengers array
+      };
 
       const res = await fetch(`${config.API_BASE_URL}/bookings/payments`, {
         method: "POST",
@@ -374,37 +271,28 @@ if (!formData.phone.trim()) {
         body: JSON.stringify(payload),
       });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.success) {
-      setPaymentStatus("✅ Payment successful! Transaction ID: " + (data.transaction_id || "N/A"));
-      await fetchBookings();
-      setTimeout(() => setCurrentView("viewBookings"), 1200);
-    } else {
-      setPaymentStatus("❌ Payment failed: " + (data.error || "Unknown error"));
-    }
-  } catch (err) {
-    setPaymentStatus("❌ Network error. Try again.");
-  } finally {
-    setIsProcessing(false);
-  }
-};
-
-  const fetchBookings = async () => {
-    setListLoading(true);
-    setListError("");
-    try {
-      const response = await fetch(`${config.API_BASE_URL}/bookings`);
-      const data = await response.json();
       if (data.success) {
-        setBookings(data.bookings);
+        setPaymentStatus("✅ Payment successful! Transaction ID: " + (data.transaction_id || "N/A"));
+        
+        // Redirect to User Dashboard after 2 seconds
+        setTimeout(() => {
+         navigate("/booking-confirmation", {    // ← Make sure it says /booking-confirmation
+      state: { 
+        bookingId: bookingId,
+        transactionId: data.transaction_id,
+        amount: amount
+      } 
+    });
+        }, 2000);
       } else {
-        setListError(data.error || "Failed to fetch bookings");
+        setPaymentStatus("❌ Payment failed: " + (data.error || "Unknown error"));
       }
-    } catch (error) {
-      setListError("Network error. Please try again.");
+    } catch (err) {
+      setPaymentStatus("❌ Network error. Try again.");
     } finally {
-      setListLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -450,17 +338,10 @@ if (!formData.phone.trim()) {
 
   const location = useLocation();
 
-  useEffect(() => {
-    // load bookings on mount
-    fetchBookings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Handle pre-filled destination from Packages page
   useEffect(() => {
     if (location.state && location.state.selectedDestination) {
       const { selectedDestination } = location.state;
-      // selectedDestination can be string or object
       let destinationName = '';
       if (typeof selectedDestination === 'string') {
         destinationName = selectedDestination;
@@ -488,12 +369,8 @@ if (!formData.phone.trim()) {
                 setCurrentView("booking");
               }}
               className="nav-link"
-              style={{ marginRight: "10px" }}
             >
-              Book New Tour
-            </button>
-            <button onClick={() => setCurrentView("viewBookings")} className="nav-link">
-              All Bookings
+              {currentView === "payment" ? "← Back to Booking" : "New Booking"}
             </button>
           </nav>
         </div>
@@ -512,7 +389,7 @@ if (!formData.phone.trim()) {
                 {/* Row 1 */}
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="name">Full Name </label>
+                    <label htmlFor="name">Full Name</label>
                     <input
                       type="text"
                       id="name"
@@ -524,7 +401,7 @@ if (!formData.phone.trim()) {
                     {errors.name && <span className="error-text">{errors.name}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="email">Email Address </label>
+                    <label htmlFor="email">Email Address</label>
                     <input
                       type="email"
                       id="email"
@@ -540,98 +417,44 @@ if (!formData.phone.trim()) {
                 {/* Row 2 */}
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="phone">Phone Number </label>
+                    <label htmlFor="phone">Phone Number</label>
                     <input
                       type="tel"
                       id="phone"
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      placeholder="+1 (555) 123-4567"
+                      placeholder="+91 98765 43210"
                     />
                     {errors.phone && <span className="error-text">{errors.phone}</span>}
                   </div>
 
-                  {/* DestinationSearch is expected to update formData.tour_destination */}
                   <div className="form-group">
-        <label>Destination & Insights</label>
-        <div className="destination-container">
-            <DestinationSearch
-                formData={formData}
-                setFormData={setFormData}
-                errors={errors}
-                setErrors={setErrors}
-            />
-            <button
-                type="button" // Use type="button" to prevent form submission
-                onClick={() => setIsInsightsModalOpen(true)}
-                disabled={!formData.tour_destination || isLoading}
-                className="gemini-btn"
-                title={!formData.tour_destination ? "Please select a destination first" : "Get AI-powered insights"}
-            >
-                ✨ AI Insights
-            </button>
-        </div>
-        {errors.tour_destination && <span className="error-text">{errors.tour_destination}</span>}
-    </div>
+                    <label>Destination</label>
+                    <DestinationSearch
+                      formData={formData}
+                      setFormData={setFormData}
+                      errors={errors}
+                      setErrors={setErrors}
+                    />
+                  </div>
                 </div>
 
-                {/* Row 3 - Departure + counts (below phone) */}
+                {/* Row 3 */}
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="departure">Departure </label>
+                    <label htmlFor="departure">Departure From</label>
                     <input
-                      type="date"
+                      type="text"
                       id="departure"
                       name="departure"
                       value={formData.departure}
                       onChange={handleInputChange}
-                      placeholder="Enter departure date"
+                      placeholder="e.g., Mumbai, Delhi"
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="adults">Adults </label>
-                    <input
-                      type="number"
-                      id="adults"
-                      name="adults"
-                      min="1"
-                      max="50"
-                      value={formData.adults}
-                      onChange={handleInputChange}
-                    />
-                    {errors.adults && <span className="error-text">{errors.adults}</span>}
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="children">Children</label>
-                    <input
-                      type="number"
-                      id="children"
-                      name="children"
-                      min="0"
-                      max="50"
-                      value={formData.children}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="infants">Infants</label>
-                    <input
-                      type="number"
-                      id="infants"
-                      name="infants"
-                      min="0"
-                      max="50"
-                      value={formData.infants}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                {/* Row 4 - Tour date */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="tour_date">Tour Date </label>
+                    <label htmlFor="tour_date">Tour Date</label>
                     <input
                       type="date"
                       id="tour_date"
@@ -641,6 +464,47 @@ if (!formData.phone.trim()) {
                       min={getTomorrowDate()}
                     />
                     {errors.tour_date && <span className="error-text">{errors.tour_date}</span>}
+                  </div>
+                </div>
+
+                {/* Row 4 - Passengers */}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="adults">Adults (18+)</label>
+                    <input
+                      type="number"
+                      id="adults"
+                      name="adults"
+                      value={formData.adults}
+                      onChange={handleInputChange}
+                      min="1"
+                      max="50"
+                    />
+                    {errors.adults && <span className="error-text">{errors.adults}</span>}
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="children">Children (2-17)</label>
+                    <input
+                      type="number"
+                      id="children"
+                      name="children"
+                      value={formData.children}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="20"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="infants">Infants (0-2)</label>
+                    <input
+                      type="number"
+                      id="infants"
+                      name="infants"
+                      value={formData.infants}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="10"
+                    />
                   </div>
                 </div>
 
@@ -672,7 +536,7 @@ if (!formData.phone.trim()) {
           </div>
         )}
 
-        {/* Payment Section (billing + attendees + card) */}
+        {/* Payment Section */}
         {currentView === "payment" && bookingId && (
           <div className="payment-container">
             <h2>Billing & Attendees</h2>
@@ -803,7 +667,7 @@ if (!formData.phone.trim()) {
               {/* Payment Info */}
               <h3>Payment Information</h3>
               <div style={{ marginBottom: "0.8rem" }}>
-                <strong>Amount to pay:</strong> ₹{(totalPassengers * PRICE_PER_PASSENGER).toFixed(2)}
+                <strong>Amount to pay: ₹{(totalPassengers * PRICE_PER_PASSENGER).toFixed(2)}</strong>
               </div>
 
               <div className="form-group">
@@ -830,101 +694,6 @@ if (!formData.phone.trim()) {
 
               {paymentStatus && <div style={{ marginTop: 12 }} className="payment-status">{paymentStatus}</div>}
             </form>
-          </div>
-        )}
-
-        {/* Booking List */}
-        {currentView === "viewBookings" && (
-          <div className="bookings-container">
-            {listLoading ? (
-              <div className="loading-message">Loading bookings...</div>
-            ) : (
-              <>
-                <div className="bookings-header">
-                  <h2>All Bookings</h2>
-                  <p>Total bookings: {bookings.length}</p>
-                </div>
-                {listError && <div className="error-message">{listError}</div>}
-                {bookings.length === 0 ? (
-                  <div className="empty-state">
-                    <h3>No bookings found</h3>
-                    <p>Start by creating your first booking!</p>
-                    <button
-                      onClick={() => {
-                        resetForm();
-                        setCurrentView("booking");
-                      }}
-                      className="cta-button"
-                    >
-                      Book Your First Tour
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bookings-grid">
-                    {bookings.map((booking) => (
-                      <div key={booking.id} className="booking-item">
-                        <div className="booking-header">
-                          <h3>{booking.name}</h3>
-                          <span className="booking-id">#{booking.id}</span>
-                        </div>
-                        <div className="booking-details">
-                          <div className="detail-row">
-                            <span className="label">📧 Email:</span>
-                            <span className="value">{booking.email}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="label">📞 Phone:</span>
-                            <span className="value">{booking.phone}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="label">🏝️ Destination:</span>
-                            <span className="value">{booking.tour_destination}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="label">🚩 Departure:</span>
-                            <span className="value">{booking.departure}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="label">📅 Tour Date:</span>
-                            <span className="value date">{formatDate(booking.tour_date)}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="label">👥 Adults:</span>
-                            <span className="value">{booking.adults ?? "-"}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="label">👶 Children:</span>
-                            <span className="value">{booking.children ?? "-"}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="label">🍼 Infants:</span>
-                            <span className="value">{booking.infants ?? "-"}</span>
-                          </div>
-                          {booking.special_requests && (
-                            <div className="detail-row">
-                              <span className="label">💭 Special Requests:</span>
-                              <span className="value">{booking.special_requests}</span>
-                            </div>
-                          )}
-                          {booking.payment_status && (
-                            <div className="detail-row">
-                              <span className="label">💳 Payment:</span>
-                              <span className="value payment-success">
-                                {booking.payment_status} - ${booking.amount}
-                              </span>
-                            </div>
-                          )}
-                          <div className="detail-row booking-date">
-                            <span className="label">🕐 Booked on:</span>
-                            <span className="value">{formatDateTime(booking.booking_date)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
           </div>
         )}
       </main>

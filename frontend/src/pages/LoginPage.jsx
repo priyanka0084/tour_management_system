@@ -1,55 +1,116 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
-import "../styles/auth.css"; 
+import "../styles/auth.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
-import config from "../config";
-import { Mail, Lock } from "lucide-react";
-
-// Google OAuth imports
+import { Mail, Lock, Loader } from "lucide-react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { useAuth } from "../context/AuthContext";
 
-const LoginPage = ({ setUser }) => {
+const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, googleLogin } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (email && password) {
-      const role = email.includes('admin') ? 'admin' : 'user';
-      const fullName = email.split('@')[0];
+    
+    if (!email || !password) {
+      toast.error("Please enter email and password", { 
+        position: "top-right", 
+        autoClose: 2000 
+      });
+      return;
+    }
 
-      setUser({ fullName, email, role });
+    setLoading(true);
 
-      toast.success("Login successful", { position: "top-right", autoClose: 2000 });
+    try {
+      // Call login from AuthContext
+      const result = await login(email, password);
 
-      setTimeout(() => {
-        if (role === "admin") navigate("/admindashboard");
-        else navigate("/userdashboard");
-      }, 1000);
-    } else {
-      setError("Please enter email and password");
-      toast.error("Please enter email and password", { position: "top-right", autoClose: 2000 });
+      if (result.success) {
+        toast.success("Login successful!", { 
+          position: "top-right", 
+          autoClose: 2000 
+        });
+
+        // Navigate based on role
+        setTimeout(() => {
+          if (result.user.role === "admin") {
+            navigate("/admindashboard");
+          } else {
+            navigate("/userdashboard");
+          }
+        }, 1000);
+      } else {
+        toast.error(result.error || "Login failed", { 
+          position: "top-right", 
+          autoClose: 3000 
+        });
+      }
+    } catch (error) {
+      toast.error("An error occurred. Please try again.", { 
+        position: "top-right", 
+        autoClose: 3000 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGoogleSuccess = (credentialResponse) => {
-    const base64Url = credentialResponse.credential.split('.')[1];
-    const decodedPayload = JSON.parse(window.atob(base64Url));
-    const fullName = decodedPayload.name || decodedPayload.email.split('@')[0];
-    const email = decodedPayload.email;
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      // Decode Google JWT token
+      const base64Url = credentialResponse.credential.split('.')[1];
+      const decodedPayload = JSON.parse(window.atob(base64Url));
+      
+      const googleData = {
+        name: decodedPayload.name || decodedPayload.email.split('@')[0],
+        email: decodedPayload.email,
+        googleId: decodedPayload.sub,
+        profilePicture: decodedPayload.picture || null
+      };
 
-    setUser({ fullName, email, role: "user" });
-    toast.success("Google login successful", { position: "top-right", autoClose: 2000 });
-    navigate("/userdashboard");
+      // Call googleLogin from AuthContext
+      const result = await googleLogin(googleData);
+
+      if (result.success) {
+        toast.success("Google login successful!", { 
+          position: "top-right", 
+          autoClose: 2000 
+        });
+
+        setTimeout(() => {
+          if (result.user.role === "admin") {
+            navigate("/admindashboard");
+          } else {
+            navigate("/userdashboard");
+          }
+        }, 1000);
+      } else {
+        toast.error(result.error || "Google login failed", { 
+          position: "top-right", 
+          autoClose: 3000 
+        });
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast.error("Google login failed", { 
+        position: "top-right", 
+        autoClose: 3000 
+      });
+    }
   };
 
   const handleGoogleError = () => {
-    toast.error("Google login failed", { position: "top-right", autoClose: 2000 });
+    toast.error("Google login failed", { 
+      position: "top-right", 
+      autoClose: 2000 
+    });
   };
 
   return (
@@ -58,21 +119,48 @@ const LoginPage = ({ setUser }) => {
       <div className="auth-container login-bg">
         <form className="auth-form trendy-form" onSubmit={handleSubmit}>
           <h2>Welcome Back 👋</h2>
-          {error && <p className="error">{error}</p>}
 
           <div className="input-group">
             <Mail size={18} />
-            <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input
+              type="email"
+              placeholder="Email Address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+            />
           </div>
 
           <div className="input-group">
             <Lock size={18} />
-            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
           </div>
 
-          <button type="submit" className="trendy-btn">Login</button>
+          <button 
+            type="submit" 
+            className="trendy-btn" 
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader size={18} className="spinner" /> Logging in...
+              </>
+            ) : (
+              "Login"
+            )}
+          </button>
 
-          <p className="register-text">Don’t have an account? <Link to="/register">Register</Link></p>
+          <p className="register-text">
+            Don't have an account? <Link to="/register">Register</Link>
+          </p>
 
           {/* Google OAuth Button */}
           <div style={{ marginTop: "20px", textAlign: "center" }}>

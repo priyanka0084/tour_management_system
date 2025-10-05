@@ -1,48 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { sendBookingConfirmation } = require('../services/emailService');
+const rateLimit = require('express-rate-limit');
+
+// Rate limiter for email resend (max 3 emails per 15 minutes)
+const emailLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 3, // limit each IP to 3 requests per windowMs
+    message: { success: false, error: 'Too many email requests. Please try again after 15 minutes.' }
+});
 
 // ---------------- BOOKING ROUTES ----------------
 
-// POST /api/bookings - Create a new booking
+// POST /api/bookings - Create new booking
 router.post('/', async (req, res) => {
     try {
-        const { 
-            name, 
-            email, 
-            phone, 
-            tour_destination, 
-            tour_date, 
-            departure, 
-            adults, 
-            children, 
-            infants, 
-            special_requests 
+        const {
+            name,
+            email,
+            phone,
+            tour_destination,
+            tour_date,
+            departure,
+            adults,
+            children,
+            infants,
+            special_requests
         } = req.body;
 
-        // Validation
         if (!name || !email || !phone || !tour_destination || !tour_date) {
-            return res.status(400).json({ success: false, error: 'Missing required fields' });
-        }
-
-        // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ success: false, error: 'Invalid email format' });
-        }
-
-        // Date validation
-        const tourDate = new Date(tour_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (tourDate < today) {
-            return res.status(400).json({ success: false, error: 'Tour date cannot be in the past' });
-        }
-
-        // Total passengers validation
-        const total_people = (adults || 0) + (children || 0) + (infants || 0);
-        if (total_people < 1 || total_people > 50) {
-            return res.status(400).json({ success: false, error: 'Total passengers must be between 1 and 50' });
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing required fields' 
+            });
         }
 
         const query = `
@@ -76,33 +67,19 @@ router.post('/', async (req, res) => {
     }
 });
 
-// GET /api/bookings - Get all bookings
+// GET /api/bookings - Get all bookings (Admin only in future)
 router.get('/', async (req, res) => {
     try {
         const query = `
             SELECT 
-                id,
-                name,
-                email,
-                phone,
-                tour_destination,
-                tour_date,
-                departure,
-                adults,
-                children,
-                infants,
-                special_requests,
-                booking_date,
-                payment_status,
-                payment_method,
-                transaction_id,
-                amount
+                id, name, email, phone, tour_destination, tour_date, departure,
+                adults, children, infants, special_requests, booking_date,
+                payment_status, payment_method, transaction_id, amount
             FROM bookings 
             ORDER BY booking_date DESC
         `;
 
         const [rows] = await pool.execute(query);
-
         res.json({ success: true, bookings: rows });
 
     } catch (error) {
@@ -118,22 +95,9 @@ router.get('/:id', async (req, res) => {
 
         const query = `
             SELECT 
-                id,
-                name,
-                email,
-                phone,
-                tour_destination,
-                tour_date,
-                departure,
-                adults,
-                children,
-                infants,
-                special_requests,
-                booking_date,
-                payment_status,
-                payment_method,
-                transaction_id,
-                amount
+                id, name, email, phone, tour_destination, tour_date, departure,
+                adults, children, infants, special_requests, booking_date,
+                payment_status, payment_method, transaction_id, amount
             FROM bookings 
             WHERE id = ?
         `;
@@ -152,33 +116,145 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// ---------------- PAYMENT ROUTES ----------------
-
-// POST /api/bookings/payments - Process payment
-router.post('/payments', async (req, res) => {
+// GET /api/bookings/:id/complete-details - Get booking with billing & passengers
+router.get('/:id/complete-details', async (req, res) => {
     try {
-        const { bookingId, amount, cardNumber, expiry, cvv, method } = req.body;
+        const { id } = req.params;
 
-        if (!bookingId || !amount || !cardNumber || !expiry || !cvv) {
-            return res.status(400).json({ success: false, error: 'Missing required payment fields' });
-        }
+        // Get booking details
+        const [bookingRows] = await pool.execute(`
+            SELECT 
+                id, name, email, phone, tour_destination, tour_date, departure,
+                adults, children, infants, special_requests, booking_date,
+                payment_status, payment_method, transaction_id, amount
+            FROM bookings 
+            WHERE id = ?
+        `, [id]);
 
-        const [bookingRows] = await pool.execute('SELECT id FROM bookings WHERE id = ?', [bookingId]);
         if (bookingRows.length === 0) {
             return res.status(404).json({ success: false, error: 'Booking not found' });
         }
 
+        const booking = bookingRows[0];
+
+        // Get billing details
+        const [billingRows] = await pool.execute(`
+            SELECT * FROM billing_details WHERE booking_id = ?
+        `, [id]);
+
+        // Get passengers
+        const [passengerRows] = await pool.execute(`
+            SELECT * FROM passengers WHERE booking_id = ?
+        `, [id]);
+
+        res.json({
+            success: true,
+            booking: booking,
+            billing: billingRows.length > 0 ? billingRows[0] : null,
+            passengers: passengerRows
+        });
+
+    } catch (error) {
+        console.error('Get complete booking details error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// ---------------- PAYMENT ROUTES ----------------
+
+// POST /api/bookings/payments - Process payment and save billing/passengers
+router.post('/payments', async (req, res) => {
+    const connection = await pool.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        const { 
+            bookingId, 
+            amount, 
+            cardNumber, 
+            expiry, 
+            cvv, 
+            method,
+            billing,
+            passengers 
+        } = req.body;
+
+        if (!bookingId || !amount || !cardNumber || !expiry || !cvv) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing required payment fields' 
+            });
+        }
+
+        // Verify booking exists
+        const [bookingRows] = await connection.execute(
+            'SELECT id FROM bookings WHERE id = ?', 
+            [bookingId]
+        );
+        
+        if (bookingRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Booking not found' 
+            });
+        }
+
+        // Generate transaction ID
         const transaction_id = 'TXN_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-        const [updateResult] = await pool.execute(`
+        // Update booking with payment details
+        await connection.execute(`
             UPDATE bookings 
             SET payment_status = ?, payment_method = ?, transaction_id = ?, amount = ? 
             WHERE id = ?
         `, ['success', method || 'Credit Card', transaction_id, amount, bookingId]);
 
-        if (updateResult.affectedRows === 0) {
-            return res.status(404).json({ success: false, error: 'Failed to update booking' });
+        // Save billing details if provided
+        if (billing) {
+            await connection.execute(`
+                INSERT INTO billing_details 
+                (booking_id, first_name, last_name, company_name, country, street_address, 
+                 apartment, city, state, pin_code, phone, email, order_notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                bookingId,
+                billing.first_name,
+                billing.last_name,
+                billing.company_name || null,
+                billing.country || 'India',
+                billing.street_address,
+                billing.apartment || null,
+                billing.city,
+                billing.state || 'Tamil Nadu',
+                billing.pin_code,
+                billing.phone,
+                billing.email,
+                billing.order_notes || null
+            ]);
         }
+
+        // Save passengers if provided
+        if (passengers && Array.isArray(passengers) && passengers.length > 0) {
+            for (const passenger of passengers) {
+                await connection.execute(`
+                    INSERT INTO passengers 
+                    (booking_id, first_name, last_name, email, dob, gender)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `, [
+                    bookingId,
+                    passenger.first_name,
+                    passenger.last_name,
+                    passenger.email || null,
+                    passenger.dob,
+                    passenger.gender
+                ]);
+            }
+        }
+
+        await connection.commit();
 
         res.json({
             success: true,
@@ -189,8 +265,14 @@ router.post('/payments', async (req, res) => {
         });
 
     } catch (error) {
+        await connection.rollback();
         console.error('Payment processing error:', error);
-        res.status(500).json({ success: false, error: 'Payment processing failed' });
+        res.status(500).json({ 
+            success: false, 
+            error: 'Payment processing failed' 
+        });
+    } finally {
+        connection.release();
     }
 });
 
@@ -201,7 +283,10 @@ router.put('/:id/payment', async (req, res) => {
         const { payment_method, transaction_id, amount, payment_status } = req.body;
 
         if (!payment_method || !amount) {
-            return res.status(400).json({ success: false, error: 'Payment method and amount are required' });
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Payment method and amount are required' 
+            });
         }
 
         const [result] = await pool.execute(`
@@ -211,7 +296,10 @@ router.put('/:id/payment', async (req, res) => {
         `, [payment_status || 'success', payment_method, transaction_id || null, amount, id]);
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, error: 'Booking not found' });
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Booking not found' 
+            });
         }
 
         res.json({ success: true, message: 'Payment updated successfully' });
@@ -240,5 +328,40 @@ router.get('/payments/all', async (req, res) => {
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
+// POST /api/bookings/:id/resend-email
+// POST /api/bookings/:id/resend-email
+router.post('/:id/resend-email', emailLimiter, async (req, res) => {  // ✅ Add emailLimiter middleware
+    try {
+        const { id } = req.params;
 
+        // Get complete booking
+        const [bookingRows] = await pool.execute('SELECT * FROM bookings WHERE id = ?', [id]);
+        if (bookingRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Booking not found' });
+        }
+
+        const booking = bookingRows[0];
+
+        // Get billing and passengers
+        const [billingRows] = await pool.execute('SELECT * FROM billing_details WHERE booking_id = ?', [id]);
+        const [passengerRows] = await pool.execute('SELECT * FROM passengers WHERE booking_id = ?', [id]);
+
+        // Send email
+        const result = await sendBookingConfirmation({
+            booking: booking,
+            billing: billingRows[0] || null,
+            passengers: passengerRows
+        });
+
+        if (result.success) {
+            res.json({ success: true, message: 'Email sent successfully' });
+        } else {
+            res.status(500).json({ success: false, error: 'Failed to send email' });
+        }
+
+    } catch (error) {
+        console.error('Resend email error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 module.exports = router;
