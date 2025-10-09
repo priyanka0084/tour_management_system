@@ -13,6 +13,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import FloatingChatbot from './components/home/FloatingChatbot';
 import './App.css';
 
 // Protected Route Component
@@ -94,6 +95,7 @@ function App() {
       <AuthProvider>
         <div className="App">
           <AppRoutes />
+          <FloatingChatbot />
         </div>
       </AuthProvider>
     </Router>
