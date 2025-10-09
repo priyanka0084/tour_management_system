@@ -1,5 +1,6 @@
-const nodemailer = require('nodemailer');
-require('dotenv').config();
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // DEBUG: Check if env variables are loaded
 console.log('📧 Email Config Check:');
@@ -36,7 +37,7 @@ const formatDate = (dateStr) => {
 };
 
 // Send booking confirmation email
-const sendBookingConfirmation = async (bookingData) => {
+export const sendBookingConfirmation = async (bookingData) => {
     const { booking, billing, passengers } = bookingData;
 
     const passengersList = passengers && passengers.length > 0 
@@ -219,8 +220,4 @@ const sendBookingConfirmation = async (bookingData) => {
         console.error('❌ Email sending failed:', error);
         return { success: false, error: error.message };
     }
-};
-
-module.exports = {
-    sendBookingConfirmation
 };

@@ -29,7 +29,6 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      // Call login from AuthContext
       const result = await login(email, password);
 
       if (result.success) {
@@ -38,7 +37,6 @@ const LoginPage = () => {
           autoClose: 2000 
         });
 
-        // Navigate based on role
         setTimeout(() => {
           if (result.user.role === "admin") {
             navigate("/admindashboard");
@@ -64,7 +62,6 @@ const LoginPage = () => {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      // Decode Google JWT token
       const base64Url = credentialResponse.credential.split('.')[1];
       const decodedPayload = JSON.parse(window.atob(base64Url));
       
@@ -75,7 +72,6 @@ const LoginPage = () => {
         profilePicture: decodedPayload.picture || null
       };
 
-      // Call googleLogin from AuthContext
       const result = await googleLogin(googleData);
 
       if (result.success) {
@@ -98,8 +94,7 @@ const LoginPage = () => {
         });
       }
     } catch (error) {
-      console.error('Google login error:', error);
-      toast.error("Google login failed", { 
+      toast.error("Google login failed. Please try again.", { 
         position: "top-right", 
         autoClose: 3000 
       });
@@ -109,7 +104,7 @@ const LoginPage = () => {
   const handleGoogleError = () => {
     toast.error("Google login failed", { 
       position: "top-right", 
-      autoClose: 2000 
+      autoClose: 3000 
     });
   };
 
@@ -144,11 +139,7 @@ const LoginPage = () => {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="trendy-btn" 
-            disabled={loading}
-          >
+          <button type="submit" className="trendy-btn" disabled={loading}>
             {loading ? (
               <>
                 <Loader size={18} className="spinner" /> Logging in...
@@ -160,6 +151,11 @@ const LoginPage = () => {
 
           <p className="register-text">
             Don't have an account? <Link to="/register">Register</Link>
+          </p>
+
+          {/* Forgot Password Link */}
+          <p className="forgot-password-text">
+            <Link to="/forgot-password">Forgot Password?</Link>
           </p>
 
           {/* Google OAuth Button */}

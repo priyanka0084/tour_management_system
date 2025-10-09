@@ -1,6 +1,25 @@
-const express = require('express');
+import express from 'express';
+import { pool } from '../db.js';
+
 const router = express.Router();
-const { pool } = require('../db');
+
+// Helper function to safely parse JSON fields
+const parseJSONField = (field) => {
+    if (!field) return null;
+    
+    // If it's already an object/array, return it
+    if (typeof field === 'object') return field;
+    
+    // Try to parse as JSON
+    try {
+        const parsed = JSON.parse(field);
+        return parsed;
+    } catch (error) {
+        // If parsing fails, treat it as a single string and convert to array
+        console.warn('Field is not valid JSON, converting to array:', field);
+        return [field];
+    }
+};
 
 // GET /api/packages/:placeId - Get packages for a specific place
 router.get('/:placeId', async (req, res) => {
@@ -34,23 +53,14 @@ router.get('/:placeId', async (req, res) => {
             return res.status(404).json({ success: false, error: 'No packages found for this place' });
         }
 
-        // Parse JSON fields for each package
+        // Parse JSON fields for each package with error handling
         const packages = rows.map(pkg => {
-            const parsedPkg = { ...pkg };
-            try {
-                if (parsedPkg.services) {
-                    parsedPkg.services = JSON.parse(parsedPkg.services);
-                }
-                if (parsedPkg.places_included) {
-                    parsedPkg.places_included = JSON.parse(parsedPkg.places_included);
-                }
-                if (parsedPkg.itinerary) {
-                    parsedPkg.itinerary = JSON.parse(parsedPkg.itinerary);
-                }
-            } catch (parseError) {
-                console.warn('Error parsing JSON fields for package:', parseError);
-            }
-            return parsedPkg;
+            return {
+                ...pkg,
+                services: parseJSONField(pkg.services),
+                places_included: parseJSONField(pkg.places_included),
+                itinerary: parseJSONField(pkg.itinerary)
+            };
         });
 
         res.json({
@@ -97,22 +107,12 @@ router.get('/detail/:packageId', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Package not found' });
         }
 
-        const packageData = rows[0];
-
-        // Parse JSON fields if they exist
-        try {
-            if (packageData.services) {
-                packageData.services = JSON.parse(packageData.services);
-            }
-            if (packageData.places_included) {
-                packageData.places_included = JSON.parse(packageData.places_included);
-            }
-            if (packageData.itinerary) {
-                packageData.itinerary = JSON.parse(packageData.itinerary);
-            }
-        } catch (parseError) {
-            console.warn('Error parsing JSON fields:', parseError);
-        }
+        const packageData = {
+            ...rows[0],
+            services: parseJSONField(rows[0].services),
+            places_included: parseJSONField(rows[0].places_included),
+            itinerary: parseJSONField(rows[0].itinerary)
+        };
 
         res.json({
             success: true,
@@ -307,4 +307,4 @@ router.post('/seed', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

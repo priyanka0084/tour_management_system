@@ -2,27 +2,47 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Heart, Star, Settings, LogOut, 
-  MapPin, CreditCard, Clock, TrendingUp, Package,
-  Bell, Shield, ChevronRight, Download, Eye,
-  X, Edit2, Save, Camera, Plane, Hotel, Users
+  TrendingUp, Package, Bell, Plane, Award, MapPin,
+  Clock, CreditCard, Shield, Menu, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 
+// Import custom components
+import StatsCard from '../components/dashboard/StatsCard';
+import BookingCard from '../components/dashboard/BookingCard';
+import WishlistCard from '../components/dashboard/WishlistCard';
+import ReviewCard from '../components/dashboard/ReviewCard';
+import NotificationPanel from '../components/dashboard/NotificationPanel';
+import ProfileEditor from '../components/dashboard/ProfileEditor';
+
+// Import styles
+import '../styles/UserDashboard.css';
+
 const UserDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  
+  // State Management
   const [activeTab, setActiveTab] = useState('overview');
   const [bookings, setBookings] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [reviews, setReviews] = useState([]);
-  const [stats, setStats] = useState({});
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    placesVisited: 0,
+    wishlistCount: 0,
+    reviewsCount: 0
+  });
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editProfile, setEditProfile] = useState(false);
-  const [profileData, setProfileData] = useState({});
-  const [notifications, setNotifications] = useState([]);
+  const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Fetch all dashboard data
   useEffect(() => {
     if (user) {
       fetchDashboardData();
@@ -32,6 +52,7 @@ const UserDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      
       const [bookingsRes, wishlistRes, reviewsRes, statsRes, notifRes] = await Promise.all([
         api.get('/user/bookings'),
         api.get('/user/wishlist'),
@@ -45,7 +66,8 @@ const UserDashboard = () => {
       setReviews(reviewsRes.data.reviews || []);
       setStats(statsRes.data.stats || {});
       setNotifications(notifRes.data.notifications || []);
-      setProfileData(user);
+      setUnreadCount(notifRes.data.unread_count || 0);
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error('Failed to load dashboard data');
@@ -54,14 +76,15 @@ const UserDashboard = () => {
     }
   };
 
-  const handleProfileUpdate = async () => {
+  // Profile Management
+  const handleProfileUpdate = async (profileData) => {
     try {
       const response = await api.put('/user/profile', profileData);
 
       if (response.data.success) {
         toast.success('Profile updated successfully!');
         setEditProfile(false);
-        // Update local user state would need to refresh auth context
+        fetchDashboardData(); // Refresh data
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -69,194 +92,375 @@ const UserDashboard = () => {
     }
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+  const handleImageUpload = async (file) => {
+    try {
       const formData = new FormData();
       formData.append('profile_picture', file);
 
-      try {
-        const response = await api.post('/user/upload-profile-picture', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+      const response = await api.post('/user/upload-profile-picture', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
-        if (response.data.success) {
-          setProfileData({ ...profileData, profilePicture: response.data.imageUrl });
-          toast.success('Profile picture updated!');
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        toast.error('Failed to upload image');
+      if (response.data.success) {
+        toast.success('Profile picture updated!');
+        fetchDashboardData(); // Refresh data
       }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
+  // Wishlist Management
+  const handleRemoveFromWishlist = async (packageId) => {
+    try {
+      const response = await api.delete(`/user/wishlist/${packageId}`);
+      
+      if (response.data.success) {
+        toast.success('Removed from wishlist');
+        setWishlist(wishlist.filter(item => item.package_id !== packageId));
+        setStats(prev => ({ ...prev, wishlistCount: prev.wishlistCount - 1 }));
+      }
+    } catch (error) {
+      console.error('Error removing from wishlist:', error);
+      toast.error('Failed to remove from wishlist');
+    }
+  };
+
+  const handleBookNow = (item) => {
+    navigate(`/packages/${item.place_id}`, { 
+      state: { selectedPackage: item } 
+    });
+  };
+
+  const handleViewPackageDetails = (item) => {
+    navigate(`/packages/${item.place_id}`);
+  };
+
+  // Booking Management
+  const handleViewBookingDetails = (booking) => {
+    // You can create a booking details modal or page
+    toast.info('Booking details view - Coming soon!');
+  };
+
+  const handleDownloadReceipt = (booking) => {
+    toast.info('Receipt download - Coming soon!');
+  };
+
+  // Notification Management
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await api.put(`/user/notifications/${notificationId}/read`);
+      
+      setNotifications(notifications.map(n => 
+        n.id === notificationId ? { ...n, is_read: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await api.put('/user/notifications/read-all');
+      
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast.error('Failed to mark notifications as read');
+    }
+  };
+
+  const handleDeleteNotification = (notificationId) => {
+    setNotifications(notifications.filter(n => n.id !== notificationId));
+    toast.success('Notification deleted');
+  };
+
+  const handleNotificationClick = (notification) => {
+    if (notification.link) {
+      const path = notification.link.split('?')[0];
+      const params = new URLSearchParams(notification.link.split('?')[1]);
+      const tab = params.get('tab');
+      
+      if (tab) {
+        setActiveTab(tab);
+      } else {
+        navigate(notification.link);
+      }
+    }
+    
+    if (!notification.is_read) {
+      handleMarkAsRead(notification.id);
+    }
+    
+    setNotificationPanelOpen(false);
+  };
+
+  // Logout
+  const handleLogout = () => {
+    logout();
     navigate('/login');
+    toast.success('Logged out successfully');
   };
 
-  const getBookingStatusColor = (status) => {
-    const colors = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      confirmed: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800',
-      completed: 'bg-blue-100 text-blue-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
+  // Navigation tabs
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: TrendingUp },
+    { id: 'bookings', label: 'My Bookings', icon: Calendar },
+    { id: 'wishlist', label: 'Wishlist', icon: Heart },
+    { id: 'reviews', label: 'Reviews', icon: Star },
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'settings', label: 'Settings', icon: Settings }
+  ];
 
+  // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-teal-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
 
+  // Render Functions
   const renderOverview = () => (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl text-white">
-          <Package className="w-10 h-10 mb-3 opacity-80" />
-          <p className="text-3xl font-bold">{stats.totalBookings || 0}</p>
-          <p className="text-sm opacity-90">Total Bookings</p>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Total Bookings"
+          value={stats.totalBookings}
+          icon={Package}
+          gradient="bg-gradient-to-br from-teal-500 to-teal-600"
+          trend="up"
+          trendValue={12}
+          description="All time bookings"
+        />
+        <StatsCard
+          title="Places Visited"
+          value={stats.placesVisited}
+          icon={MapPin}
+          gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+          description="Completed trips"
+        />
+        <StatsCard
+          title="Wishlist"
+          value={stats.wishlistCount}
+          icon={Heart}
+          gradient="bg-gradient-to-br from-pink-500 to-pink-600"
+          description="Saved destinations"
+        />
+        <StatsCard
+          title="Reviews"
+          value={stats.reviewsCount}
+          icon={Star}
+          gradient="bg-gradient-to-br from-orange-500 to-orange-600"
+          description="Shared experiences"
+        />
         
-        <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-6 rounded-xl text-white">
-          <MapPin className="w-10 h-10 mb-3 opacity-80" />
-          <p className="text-3xl font-bold">{stats.placesVisited || 0}</p>
-          <p className="text-sm opacity-90">Places Visited</p>
-        </div>
-        
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-xl text-white">
-          <Heart className="w-10 h-10 mb-3 opacity-80" />
-          <p className="text-3xl font-bold">{stats.wishlistCount || 0}</p>
-          <p className="text-sm opacity-90">Wishlist Items</p>
-        </div>
-        
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 rounded-xl text-white">
-          <Star className="w-10 h-10 mb-3 opacity-80" />
-          <p className="text-3xl font-bold">{stats.reviewsCount || 0}</p>
-          <p className="text-sm opacity-90">Reviews Given</p>
-        </div>
       </div>
 
       {/* Recent Bookings */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-gray-800">Recent Bookings</h3>
-          <button 
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Calendar className="w-6 h-6 text-teal-600" />
+            Recent Bookings
+          </h3>
+          <button
             onClick={() => setActiveTab('bookings')}
-            className="text-teal-600 hover:underline text-sm flex items-center gap-1"
+            className="text-teal-600 hover:text-teal-700 font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all"
           >
-            View All <ChevronRight className="w-4 h-4" />
+            View All
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
 
-        {bookings.slice(0, 3).map((booking) => (
-          <div key={booking.id} className="border-b last:border-0 pb-4 mb-4 last:mb-0 last:pb-0">
-            <div className="flex justify-between items-start">
-              <div>
-                <h4 className="font-semibold text-gray-800">{booking.packageName || booking.tour_destination}</h4>
-                <p className="text-sm text-gray-600 mt-1">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  {booking.tour_destination}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  {new Date(booking.tour_date).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getBookingStatusColor(booking.status)}`}>
-                  {booking.status}
-                </span>
-                <p className="text-lg font-bold text-gray-800 mt-2">₹{booking.amount?.toLocaleString()}</p>
-              </div>
+        {bookings.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+              <Package className="w-10 h-10 text-gray-400" />
             </div>
+            <h4 className="text-lg font-semibold text-gray-700 mb-2">No bookings yet</h4>
+            <p className="text-gray-500 mb-4">Start exploring amazing destinations!</p>
+            <button
+              onClick={() => navigate('/destinations')}
+              className="px-6 py-3 bg-gradient-to-r from-teal-500 to-blue-500 text-white rounded-xl hover:from-teal-600 hover:to-blue-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              Explore Destinations
+            </button>
           </div>
-        ))}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {bookings.slice(0, 3).map((booking) => (
+              <BookingCard
+                key={booking.id}
+                booking={booking}
+                onViewDetails={handleViewBookingDetails}
+                onDownloadReceipt={handleDownloadReceipt}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <button onClick={() => navigate('/destinations')} className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition-shadow text-center">
-          <Plane className="w-8 h-8 mx-auto mb-2 text-teal-600" />
-          <p className="text-sm font-medium">Book a Trip</p>
+        <button
+          onClick={() => navigate('/destinations')}
+          className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 text-center group transform hover:-translate-y-1"
+        >
+          <div className="p-3 bg-teal-100 rounded-xl w-fit mx-auto mb-3 group-hover:bg-teal-500 transition-colors">
+            <Plane className="w-8 h-8 text-teal-600 group-hover:text-white transition-colors" />
+          </div>
+          <p className="font-semibold text-gray-800 group-hover:text-teal-600 transition-colors">
+            Book a Trip
+          </p>
         </button>
-        <button onClick={() => setActiveTab('wishlist')} className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition-shadow text-center">
-          <Heart className="w-8 h-8 mx-auto mb-2 text-pink-600" />
-          <p className="text-sm font-medium">My Wishlist</p>
+
+        <button
+          onClick={() => setActiveTab('wishlist')}
+          className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 text-center group transform hover:-translate-y-1"
+        >
+          <div className="p-3 bg-pink-100 rounded-xl w-fit mx-auto mb-3 group-hover:bg-pink-500 transition-colors">
+            <Heart className="w-8 h-8 text-pink-600 group-hover:text-white transition-colors" />
+          </div>
+          <p className="font-semibold text-gray-800 group-hover:text-pink-600 transition-colors">
+            My Wishlist
+          </p>
         </button>
-        <button onClick={() => setActiveTab('reviews')} className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition-shadow text-center">
-          <Star className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
-          <p className="text-sm font-medium">Write Review</p>
+
+        <button
+          onClick={() => setActiveTab('reviews')}
+          className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 text-center group transform hover:-translate-y-1"
+        >
+          <div className="p-3 bg-yellow-100 rounded-xl w-fit mx-auto mb-3 group-hover:bg-yellow-500 transition-colors">
+            <Star className="w-8 h-8 text-yellow-600 group-hover:text-white transition-colors" />
+          </div>
+          <p className="font-semibold text-gray-800 group-hover:text-yellow-600 transition-colors">
+            Write Review
+          </p>
         </button>
-        <button onClick={() => setActiveTab('settings')} className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition-shadow text-center">
-          <Settings className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-          <p className="text-sm font-medium">Settings</p>
+
+        <button
+          onClick={() => setActiveTab('settings')}
+          className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 text-center group transform hover:-translate-y-1"
+        >
+          <div className="p-3 bg-gray-100 rounded-xl w-fit mx-auto mb-3 group-hover:bg-gray-500 transition-colors">
+            <Settings className="w-8 h-8 text-gray-600 group-hover:text-white transition-colors" />
+          </div>
+          <p className="font-semibold text-gray-800 group-hover:text-gray-600 transition-colors">
+            Settings
+          </p>
         </button>
       </div>
     </div>
   );
 
   const renderBookings = () => (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h3 className="text-2xl font-bold text-gray-800 mb-6">My Bookings</h3>
+    <div className="bg-white rounded-2xl shadow-lg p-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <Calendar className="w-6 h-6 text-teal-600" />
+        All Bookings
+      </h3>
       
       {bookings.length === 0 ? (
         <div className="text-center py-12">
-          <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-500">No bookings yet</p>
-          <button onClick={() => navigate('/destinations')} className="mt-4 inline-block text-teal-600 hover:underline">
-            Start exploring destinations
+          <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <Package className="w-10 h-10 text-gray-400" />
+          </div>
+          <h4 className="text-lg font-semibold text-gray-700 mb-2">No bookings found</h4>
+          <p className="text-gray-500 mb-4">Book your first trip now!</p>
+          <button
+            onClick={() => navigate('/destinations')}
+            className="px-6 py-3 bg-gradient-to-r from-teal-500 to-blue-500 text-white rounded-xl hover:from-teal-600 hover:to-blue-600 transition-all duration-300 font-semibold"
+          >
+            Explore Destinations
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {bookings.map((booking) => (
-            <div key={booking.id} className="border rounded-xl p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col md:flex-row justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h4 className="text-lg font-semibold">{booking.packageName || booking.tour_destination}</h4>
-                    <span className={`px-2 py-1 rounded-full text-xs ${getBookingStatusColor(booking.status)}`}>
-                      {booking.status}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                    <div>
-                      <p className="font-medium text-gray-500">Booking Ref</p>
-                      <p className="font-mono">{booking.booking_reference}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-500">Travel Date</p>
-                      <p>{new Date(booking.tour_date).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-500">Travelers</p>
-                      <p>{(booking.adults || 0) + (booking.children || 0) + (booking.infants || 0)} Person(s)</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-500">Amount</p>
-                      <p className="font-bold text-gray-800">₹{booking.amount?.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex gap-2 mt-4 md:mt-0 md:ml-4">
-                  <button className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
-                    <Eye className="w-5 h-5" />
-                  </button>
-                  <button className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-                    <Download className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
+            <BookingCard
+              key={booking.id}
+              booking={booking}
+              onViewDetails={handleViewBookingDetails}
+              onDownloadReceipt={handleDownloadReceipt}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderWishlist = () => (
+    <div className="bg-white rounded-2xl shadow-lg p-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <Heart className="w-6 h-6 text-pink-600" />
+        My Wishlist
+      </h3>
+      
+      {wishlist.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="p-4 bg-pink-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <Heart className="w-10 h-10 text-pink-400" />
+          </div>
+          <h4 className="text-lg font-semibold text-gray-700 mb-2">No items in wishlist</h4>
+          <p className="text-gray-500 mb-4">Save your favorite destinations here!</p>
+          <button
+            onClick={() => navigate('/destinations')}
+            className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all duration-300 font-semibold"
+          >
+            Browse Destinations
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {wishlist.map((item) => (
+            <WishlistCard
+              key={item.id}
+              item={item}
+              onRemove={handleRemoveFromWishlist}
+              onBookNow={handleBookNow}
+              onViewDetails={handleViewPackageDetails}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderReviews = () => (
+    <div className="bg-white rounded-2xl shadow-lg p-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <Star className="w-6 h-6 text-yellow-600" />
+        My Reviews
+      </h3>
+      
+      {reviews.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="p-4 bg-yellow-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <Star className="w-10 h-10 text-yellow-400" />
+          </div>
+          <h4 className="text-lg font-semibold text-gray-700 mb-2">No reviews yet</h4>
+          <p className="text-gray-500 mb-4">Share your travel experiences!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {reviews.map((review) => (
+            <ReviewCard
+              key={review.id}
+              review={review}
+              onEdit={(review) => toast.info('Edit review - Coming soon!')}
+            />
           ))}
         </div>
       )}
@@ -264,231 +468,416 @@ const UserDashboard = () => {
   );
 
   const renderProfile = () => (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-2xl font-bold text-gray-800">My Profile</h3>
-        <button
-          onClick={() => setEditProfile(!editProfile)}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-        >
-          {editProfile ? <X className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-          {editProfile ? 'Cancel' : 'Edit Profile'}
-        </button>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Profile Picture */}
-        <div className="text-center">
-          <div className="relative inline-block">
-            <img
-              src={profileData.profilePicture || user?.profilePicture || `https://ui-avatars.com/api/?name=${user?.name}&size=200`}
-              alt={user?.name}
-              className="w-32 h-32 rounded-full object-cover border-4 border-teal-100"
-            />
-            {editProfile && (
-              <label className="absolute bottom-0 right-0 bg-teal-600 text-white p-2 rounded-full cursor-pointer hover:bg-teal-700">
-                <Camera className="w-4 h-4" />
-                <input type="file" className="hidden" onChange={handleImageUpload} accept="image/*" />
-              </label>
-            )}
-          </div>
-          <p className="mt-4 text-sm text-gray-600">Member since {new Date(user?.created_at || Date.now()).getFullYear()}</p>
-        </div>
-
-        {/* Profile Form */}
-        <div className="md:col-span-2 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              {editProfile ? (
-                <input
-                  type="text"
-                  value={profileData.name || ''}
-                  onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
-              ) : (
-                <p className="text-gray-800">{user?.name}</p>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <p className="text-gray-800">{user?.email}</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              {editProfile ? (
-                <input
-                  type="tel"
-                  value={profileData.phone || ''}
-                  onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
-              ) : (
-                <p className="text-gray-800">{user?.phone || 'Not provided'}</p>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Date of Birth</label>
-              {editProfile ? (
-                <input
-                  type="date"
-                  value={profileData.date_of_birth || ''}
-                  onChange={(e) => setProfileData({...profileData, date_of_birth: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
-              ) : (
-                <p className="text-gray-800">{user?.date_of_birth || 'Not provided'}</p>
-              )}
-            </div>
-          </div>
-
-          {editProfile && (
-            <button
-              onClick={handleProfileUpdate}
-              className="w-full md:w-auto px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2 justify-center"
-            >
-              <Save className="w-4 h-4" />
-              Save Changes
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+    <ProfileEditor
+      user={user}
+      isEditing={editProfile}
+      onSave={handleProfileUpdate}
+      onCancel={() => setEditProfile(false)}
+      onImageUpload={handleImageUpload}
+    />
   );
 
-  const renderWishlist = () => (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h3 className="text-2xl font-bold text-gray-800 mb-6">My Wishlist</h3>
+  const renderSettings = () => (
+    <div className="bg-white rounded-2xl shadow-lg p-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <Settings className="w-6 h-6 text-gray-600" />
+        Settings
+      </h3>
       
-      {wishlist.length === 0 ? (
-        <div className="text-center py-12">
-          <Heart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-500">Your wishlist is empty</p>
-          <button onClick={() => navigate('/destinations')} className="mt-4 inline-block text-teal-600 hover:underline">
-            Explore destinations
+      <div className="space-y-6">
+        {/* Account Settings */}
+        <div>
+          <h4 className="font-semibold text-lg text-gray-800 mb-4">Account Settings</h4>
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                setActiveTab('profile');
+                setEditProfile(true);
+              }}
+              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-gray-600" />
+                <span className="font-medium text-gray-800">Edit Profile</span>
+              </div>
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <button className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-gray-600" />
+                <span className="font-medium text-gray-800">Change Password</span>
+              </div>
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <button className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">
+              <div className="flex items-center gap-3">
+                <Bell className="w-5 h-5 text-gray-600" />
+                <span className="font-medium text-gray-800">Notification Preferences</span>
+              </div>
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Danger Zone */}
+        <div>
+          <h4 className="font-semibold text-lg text-red-600 mb-4">Danger Zone</h4>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors font-semibold"
+          >
+            <LogOut className="w-5 h-5" />
+            Logout
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {wishlist.map((item) => (
-            <div key={item.id} className="border rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
-              <img 
-                src={item.image_url} 
-                alt={item.name}
-                className="w-full h-48 object-cover"
-              />
-              <div className="p-4">
-                <h4 className="font-semibold text-gray-800 mb-2">{item.name}</h4>
-                <p className="text-sm text-gray-600 mb-3">{item.country}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold text-teal-600">
-                    ₹{item.price_per_person?.toLocaleString()}
-                  </span>
-                  <button className="text-red-500 hover:text-red-700">
-                    <Heart className="w-5 h-5 fill-current" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 text-white">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center gap-4 mb-4 md:mb-0">
+  <div className="user-dashboard">
+    {/* Header */}
+    <div className="dashboard-header">
+      <div className="header-content">
+        <div className="header-flex">
+          {/* User Info */}
+          <div className="user-info-section">
+            <div className="user-avatar-wrapper">
               <img 
-                src={user?.profilePicture || `https://ui-avatars.com/api/?name=${user?.name}&size=100`}
+                src={user?.profile_picture || `https://ui-avatars.com/api/?name=${user?.name}&size=100&background=14b8a6&color=fff&bold=true`}
                 alt={user?.name}
-                className="w-16 h-16 rounded-full border-4 border-white/30"
+                className="user-avatar"
               />
-              <div>
-                <h1 className="text-2xl font-bold">Welcome back, {user?.name}!</h1>
-                <p className="text-teal-100">Manage your travel journey</p>
-              </div>
+              <div className="online-badge"></div>
             </div>
-            
-            <div className="flex items-center gap-4">
-              <button className="relative p-2 hover:bg-white/10 rounded-lg transition-colors">
-                <Bell className="w-6 h-6" />
-                {notifications.filter(n => !n.is_read).length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
-                    {notifications.filter(n => !n.is_read).length}
-                  </span>
-                )}
-              </button>
-              <button 
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
+            <div className="user-greeting">
+              <h1>Welcome back, {user?.name?.split(' ')[0]}! 👋</h1>
+              <p>Manage your travel journey</p>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4">
-          <div className="flex overflow-x-auto">
-            {[
-              { id: 'overview', label: 'Overview', icon: TrendingUp },
-              { id: 'bookings', label: 'My Bookings', icon: Calendar },
-              { id: 'profile', label: 'Profile', icon: User },
-              { id: 'wishlist', label: 'Wishlist', icon: Heart },
-              { id: 'reviews', label: 'Reviews', icon: Star },
-              { id: 'settings', label: 'Settings', icon: Settings }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-teal-600 text-teal-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                <tab.icon className="w-5 h-5" />
-                {tab.label}
-              </button>
-            ))}
+          {/* Actions */}
+          <div className="header-actions">
+            <button 
+              onClick={() => setNotificationPanelOpen(true)}
+              className="notification-btn"
+            >
+              <Bell className="icon" />
+              {unreadCount > 0 && (
+                <span className="notification-badge">{unreadCount}</span>
+              )}
+            </button>
+            <button onClick={handleLogout} className="logout-btn">
+              <LogOut className="icon" />
+              <span>Logout</span>
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="container mx-auto px-4 py-8">
-        {activeTab === 'overview' && renderOverview()}
-        {activeTab === 'bookings' && renderBookings()}
-        {activeTab === 'profile' && renderProfile()}
-        {activeTab === 'wishlist' && renderWishlist()}
-        {activeTab === 'reviews' && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">My Reviews</h3>
-            <p className="text-gray-600">Reviews section coming soon...</p>
-          </div>
-        )}
-        {activeTab === 'settings' && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">Settings</h3>
-            <p className="text-gray-600">Settings section coming soon...</p>
-          </div>
-        )}
       </div>
     </div>
-  );
+
+    {/* Navigation */}
+    <div className="dashboard-nav">
+      <div className="nav-container">
+        <div className="nav-tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === 'profile') setEditProfile(false);
+              }}
+              className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              <tab.icon className="icon" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Main Content */}
+    <div className="dashboard-content">
+      {activeTab === 'overview' && (
+        <div className="overview-section">
+          {/* Stats Cards */}
+          <div className="stats-grid">
+            <StatsCard
+              title="Total Bookings"
+              value={stats.totalBookings}
+              icon={Package}
+              gradient="gradient-teal"
+              description="All time bookings"
+            />
+            <StatsCard
+              title="Places Visited"
+              value={stats.placesVisited}
+              icon={MapPin}
+              gradient="gradient-blue"
+              description="Completed trips"
+            />
+            <StatsCard
+              title="Wishlist"
+              value={stats.wishlistCount}
+              icon={Heart}
+              gradient="gradient-pink"
+              description="Saved destinations"
+            />
+            <StatsCard
+              title="Reviews"
+              value={stats.reviewsCount}
+              icon={Star}
+              gradient="gradient-orange"
+              description="Shared experiences"
+            />
+          </div>
+
+          {/* Recent Bookings */}
+          <div className="content-card">
+            <div className="content-card-header">
+              <h3 className="content-card-title">
+                <Calendar className="icon" />
+                Recent Bookings
+              </h3>
+              <button onClick={() => setActiveTab('bookings')} className="view-all-btn">
+                View All →
+              </button>
+            </div>
+
+            {bookings.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <Package className="icon" />
+                </div>
+                <h4 className="empty-state-title">No bookings yet</h4>
+                <p className="empty-state-text">Start exploring amazing destinations!</p>
+                <button onClick={() => navigate('/destinations')} className="empty-state-btn">
+                  Explore Destinations
+                </button>
+              </div>
+            ) : (
+              <div className="bookings-grid">
+                {bookings.slice(0, 3).map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    onViewDetails={handleViewBookingDetails}
+                    onDownloadReceipt={handleDownloadReceipt}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="quick-actions-grid">
+            <button onClick={() => navigate('/destinations')} className="quick-action-card">
+              <div className="quick-action-icon icon-teal">
+                <Plane className="icon" />
+              </div>
+              <p className="quick-action-label">Book a Trip</p>
+            </button>
+
+            <button onClick={() => setActiveTab('wishlist')} className="quick-action-card">
+              <div className="quick-action-icon icon-pink">
+                <Heart className="icon" />
+              </div>
+              <p className="quick-action-label">My Wishlist</p>
+            </button>
+
+            <button onClick={() => setActiveTab('reviews')} className="quick-action-card">
+              <div className="quick-action-icon icon-yellow">
+                <Star className="icon" />
+              </div>
+              <p className="quick-action-label">Write Review</p>
+            </button>
+
+            <button onClick={() => setActiveTab('settings')} className="quick-action-card">
+              <div className="quick-action-icon icon-gray">
+                <Settings className="icon" />
+              </div>
+              <p className="quick-action-label">Settings</p>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'bookings' && (
+        <div className="content-card">
+          <h3 className="content-card-title">
+            <Calendar className="icon" />
+            All Bookings
+          </h3>
+          {bookings.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <Package className="icon" />
+              </div>
+              <h4 className="empty-state-title">No bookings found</h4>
+              <p className="empty-state-text">Book your first trip now!</p>
+              <button onClick={() => navigate('/destinations')} className="empty-state-btn">
+                Explore Destinations
+              </button>
+            </div>
+          ) : (
+            <div className="bookings-grid">
+              {bookings.map((booking) => (
+                <BookingCard
+                  key={booking.id}
+                  booking={booking}
+                  onViewDetails={handleViewBookingDetails}
+                  onDownloadReceipt={handleDownloadReceipt}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'wishlist' && (
+        <div className="content-card">
+          <h3 className="content-card-title">
+            <Heart className="icon" />
+            My Wishlist
+          </h3>
+          {wishlist.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon icon-pink">
+                <Heart className="icon" />
+              </div>
+              <h4 className="empty-state-title">No items in wishlist</h4>
+              <p className="empty-state-text">Save your favorite destinations here!</p>
+              <button onClick={() => navigate('/destinations')} className="empty-state-btn">
+                Browse Destinations
+              </button>
+            </div>
+          ) : (
+            <div className="wishlist-grid">
+              {wishlist.map((item) => (
+                <WishlistCard
+                  key={item.id}
+                  item={item}
+                  onRemove={handleRemoveFromWishlist}
+                  onBookNow={handleBookNow}
+                  onViewDetails={handleViewPackageDetails}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'reviews' && (
+        <div className="content-card">
+          <h3 className="content-card-title">
+            <Star className="icon" />
+            My Reviews
+          </h3>
+          {reviews.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon icon-yellow">
+                <Star className="icon" />
+              </div>
+              <h4 className="empty-state-title">No reviews yet</h4>
+              <p className="empty-state-text">Share your travel experiences!</p>
+            </div>
+          ) : (
+            <div className="reviews-grid">
+              {reviews.map((review) => (
+                <ReviewCard
+                  key={review.id}
+                  review={review}
+                  onEdit={() => toast.info('Edit review - Coming soon!')}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'profile' && (
+        <ProfileEditor
+          user={user}
+          isEditing={editProfile}
+          onSave={handleProfileUpdate}
+          onCancel={() => setEditProfile(false)}
+          onImageUpload={handleImageUpload}
+        />
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="content-card">
+          <h3 className="content-card-title">
+            <Settings className="icon" />
+            Settings
+          </h3>
+          
+          <div className="settings-container">
+            <div className="settings-section">
+              <h4 className="settings-section-title">Account Settings</h4>
+              <div className="settings-items">
+                <button onClick={() => { setActiveTab('profile'); setEditProfile(true); }} className="settings-item">
+                  <div className="settings-item-content">
+                    <User className="settings-item-icon" />
+                    <span className="settings-item-label">Edit Profile</span>
+                  </div>
+                  <span className="settings-arrow">→</span>
+                </button>
+
+                <button className="settings-item">
+                  <div className="settings-item-content">
+                    <Shield className="settings-item-icon" />
+                    <span className="settings-item-label">Change Password</span>
+                  </div>
+                  <span className="settings-arrow">→</span>
+                </button>
+
+                <button className="settings-item">
+                  <div className="settings-item-content">
+                    <Bell className="settings-item-icon" />
+                    <span className="settings-item-label">Notification Preferences</span>
+                  </div>
+                  <span className="settings-arrow">→</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-section danger-zone">
+              <h4 className="settings-section-title">Danger Zone</h4>
+              <button onClick={handleLogout} className="settings-item">
+                <div className="settings-item-content">
+                  <LogOut className="settings-item-icon" />
+                  <span className="settings-item-label">Logout</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Notification Panel */}
+    <NotificationPanel
+      notifications={notifications}
+      unreadCount={unreadCount}
+      isOpen={notificationPanelOpen}
+      onClose={() => setNotificationPanelOpen(false)}
+      onMarkAsRead={handleMarkAsRead}
+      onMarkAllAsRead={handleMarkAllAsRead}
+      onDelete={handleDeleteNotification}
+      onNotificationClick={handleNotificationClick}
+    />
+  </div>
+);
 };
 
 export default UserDashboard;

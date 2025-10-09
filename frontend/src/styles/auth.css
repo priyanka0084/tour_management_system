@@ -173,3 +173,90 @@
 .trendy-btn:disabled:hover {
   transform: none;
 }
+/* Add this to your frontend/src/styles/auth.css file */
+
+.forgot-password-text {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+.forgot-password-text a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.forgot-password-text a:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+/* Add these styles to your frontend/src/styles/auth.css file */
+
+/* Forgot Password Page Background */
+.forgot-password-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reset Password Page Background */
+.reset-password-bg {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Auth Subtitle */
+.auth-subtitle {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  margin: -10px 0 25px 0;
+  line-height: 1.5;
+}
+
+/* Auth Info */
+.auth-info {
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  margin: 15px 0;
+  line-height: 1.6;
+  padding: 0 20px;
+}
+
+/* Success Icon */
+.success-icon {
+  text-align: center;
+  font-size: 60px;
+  margin-bottom: 20px;
+  animation: scaleIn 0.5s ease-in-out;
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Make the back to login link look better */
+.register-text a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}

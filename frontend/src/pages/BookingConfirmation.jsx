@@ -59,7 +59,7 @@ const BookingConfirmation = () => {
   const fetchBookingDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${config.API_BASE_URL}/bookings/${bookingId}/complete-details`);
+      const response = await fetch(`${config.API_BASE_URL}/bookingpayment/${bookingId}/complete-details`);
       const data = await response.json();
 
       if (data.success) {
@@ -267,7 +267,7 @@ const handleDownloadPDF = () => {
   setEmailStatus('');
 
   try {
-    const response = await fetch(`${config.API_BASE_URL}/bookings/${bookingId}/resend-email`, {
+    const response = await fetch(`${config.API_BASE_URL}/bookingpayment/${bookingId}/resend-email`, {
       method: 'POST'
     });
 

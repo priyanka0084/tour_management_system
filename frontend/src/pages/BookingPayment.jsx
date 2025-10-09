@@ -219,7 +219,7 @@ const BookingPayment = () => {
         special_requests: formData.special_requests,
       };
 
-      const res = await fetch(`${config.API_BASE_URL}/bookings`, {
+      const res = await fetch(`${config.API_BASE_URL}/bookingpayment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -240,61 +240,63 @@ const BookingPayment = () => {
   };
 
   const handlePayment = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const problems = validatePaymentAndPassengers();
-    if (problems.length > 0) {
-      setPaymentStatus("❌ " + problems.join("; "));
-      return;
-    }
+  const problems = validatePaymentAndPassengers();
+  if (problems.length > 0) {
+    setPaymentStatus("❌ " + problems.join("; "));
+    return;
+  }
 
-    setIsProcessing(true);
-    setPaymentStatus("");
+  setIsProcessing(true);
+  setPaymentStatus("");
 
-    try {
-      const amount = totalPassengers * PRICE_PER_PASSENGER;
+  try {
+    const amount = totalPassengers * PRICE_PER_PASSENGER;
 
-      const payload = {
-        bookingId,
-        amount,
-        cardNumber: paymentData.cardNumber,
-        expiry: paymentData.expiry,
-        cvv: paymentData.cvv,
-        method: paymentData.method,
-        billing: billing,  // Send billing details
-        passengers: passengers  // Send passengers array
-      };
+    const payload = {
+      bookingId,
+      amount,
+      cardNumber: paymentData.cardNumber,
+      expiry: paymentData.expiry,
+      cvv: paymentData.cvv,
+      method: paymentData.method,
+      billing: billing,
+      passengers: passengers
+    };
 
-      const res = await fetch(`${config.API_BASE_URL}/bookings/payments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        setPaymentStatus("✅ Payment successful! Transaction ID: " + (data.transaction_id || "N/A"));
-        
-        // Redirect to User Dashboard after 2 seconds
-        setTimeout(() => {
-         navigate("/booking-confirmation", {    // ← Make sure it says /booking-confirmation
-      state: { 
-        bookingId: bookingId,
-        transactionId: data.transaction_id,
-        amount: amount
-      } 
+    // ✅ FIXED: Changed from /bookingpayment to /bookingpayment/payments
+    const res = await fetch(`${config.API_BASE_URL}/bookingpayment/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
-        }, 2000);
-      } else {
-        setPaymentStatus("❌ Payment failed: " + (data.error || "Unknown error"));
-      }
-    } catch (err) {
-      setPaymentStatus("❌ Network error. Try again.");
-    } finally {
-      setIsProcessing(false);
+
+    const data = await res.json();
+
+    if (data.success) {
+      setPaymentStatus("✅ Payment successful! Transaction ID: " + (data.transaction_id || "N/A"));
+      
+      // Redirect to confirmation page after 2 seconds
+      setTimeout(() => {
+        navigate("/booking-confirmation", {
+          state: { 
+            bookingId: bookingId,
+            transactionId: data.transaction_id,
+            amount: amount
+          } 
+        });
+      }, 2000);
+    } else {
+      setPaymentStatus("❌ Payment failed: " + (data.error || "Unknown error"));
     }
-  };
+  } catch (err) {
+    console.error("Payment error:", err);
+    setPaymentStatus("❌ Network error. Try again.");
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const resetForm = () => {
     setFormData({

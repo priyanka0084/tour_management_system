@@ -1,19 +1,21 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const morgan = require('morgan');
-const path = require('path');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Import routes
-const authRoutes = require('./routes/auth');
-const bookingRoutes = require('./routes/bookingpayment');
-const destinationsRoutes = require('./routes/destinations');
-const packagesRoutes = require('./routes/packages');
 
 // Security middleware
 app.use(helmet({
@@ -33,7 +35,7 @@ app.use(helmet({
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production'
         ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['https://yourdomain.com', 'https://www.yourdomain.com'])
-        : ['http://localhost:5173', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:5176'], // Allow frontend origins in development
+        : ['http://localhost:5173', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:5176'],
     credentials: true,
     optionsSuccessStatus: 200
 };
@@ -42,8 +44,8 @@ app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: process.env.NODE_ENV === 'production' ? 100 : 1000, // requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: process.env.NODE_ENV === 'production' ? 100 : 1000,
     message: {
         success: false,
         error: 'Too many requests from this IP, please try again later.'
@@ -57,8 +59,8 @@ app.use('/api/', limiter);
 
 // Stricter rate limiting for booking routes
 const bookingLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // 10 booking requests per 15 minutes
+    windowMs: 15 * 60 * 1000,
+    max: 10,
     message: {
         success: false,
         error: 'Too many booking requests, please try again later.'
@@ -86,15 +88,40 @@ app.get('/health', (req, res) => {
     });
 });
 
-// API Routes with rate limiting
+// Import routes (with .js extension for ES modules)
+import authRoutes from './routes/auth.js';
+import bookingRoutes from './routes/bookingpayment.js';
+import destinationsRoutes from './routes/destinations.js';
+import packagesRoutes from './routes/packages.js';
+import adminDestinationsRoutes from './routes/admin/destinations.js';
+import adminPackagesRoutes from './routes/admin/packages.js';
+import adminBookingsRoutes from './routes/admin/bookings.js';
+import adminUsersRoutes from './routes/admin/users.js';
+import userDashboardRoutes from './routes/userDashboard.js';
+import whatsappRoutes from './routes/whatsapp.js';
+
+// Register ALL routes ONCE (order matters!)
 app.use('/api/auth', authRoutes);
-app.use('/api/bookings', bookingLimiter, bookingRoutes);
+app.use('/api/bookingpayment', bookingLimiter, bookingRoutes);
 app.use('/api/destinations', destinationsRoutes);
 app.use('/api/packages', packagesRoutes);
 
+// Admin routes
+app.use('/api/admin/destinations', adminDestinationsRoutes);
+app.use('/api/admin/packages', adminPackagesRoutes);
+app.use('/api/admin/bookings', adminBookingsRoutes);
+app.use('/api/admin/users', adminUsersRoutes);
 
+// User dashboard routes (NEW)
+app.use('/api/user', userDashboardRoutes);
 
-// 404 handler for API routes
+// WhatsApp routes (NEW)
+app.use('/api/whatsapp', whatsappRoutes);
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// 404 handler MUST come AFTER all routes
 app.use('/api/*', (req, res) => {
     res.status(404).json({
         success: false,
@@ -106,7 +133,6 @@ app.use('/api/*', (req, res) => {
 app.use((error, req, res, next) => {
     console.error('Global error handler:', error);
 
-    // Handle specific error types
     if (error.type === 'entity.parse.failed') {
         return res.status(400).json({
             success: false,
@@ -121,7 +147,6 @@ app.use((error, req, res, next) => {
         });
     }
 
-    // Database connection errors
     if (error.code === 'PROTOCOL_CONNECTION_LOST') {
         return res.status(503).json({
             success: false,
@@ -136,7 +161,6 @@ app.use((error, req, res, next) => {
         });
     }
 
-    // Default error response
     res.status(error.status || 500).json({
         success: false,
         error: process.env.NODE_ENV === 'production' 
@@ -145,10 +169,19 @@ app.use((error, req, res, next) => {
     });
 });
 
+// Start server
+const server = app.listen(PORT, () => {
+    console.log(`
+🚀 Server is running on port ${PORT}
+📦 Environment: ${process.env.NODE_ENV || 'development'}
+🔗 API Base URL: http://localhost:${PORT}/api
+📊 Health Check: http://localhost:${PORT}/health
+    `);
+});
+
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
     console.error('Unhandled Promise Rejection:', err);
-    // Close server & exit process
     server.close(() => {
         process.exit(1);
     });
@@ -177,15 +210,4 @@ process.on('SIGTERM', () => {
     });
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-    console.log(`
-🚀 Server is running on port ${PORT}
-📦 Environment: ${process.env.NODE_ENV || 'development'}
-🔗 API Base URL: http://localhost:${PORT}/api
-📊 Health Check: http://localhost:${PORT}/health
-    `);
-});
-
-// Export app for testing
-module.exports = app;
+export default app;

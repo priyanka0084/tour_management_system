@@ -1,419 +1,342 @@
-// userDashboard.routes.js
-const express = require('express');
+import express from 'express';
+import { pool } from '../db.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { authMiddleware } from '../middleware/auth.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const router = express.Router();
-const mysql = require('mysql2/promise');
-const bcrypt = require('bcrypt');
-const multer = require('multer');
-const path = require('path');
 
-// Database connection
-const dbConfig = {
-  host: 'localhost',
-  user: 'root',
-  password: 'your_password',
-  database: 'tour_booking',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-};
+// ============================================
+// MULTER CONFIGURATION
+// ============================================
 
-const pool = mysql.createPool(dbConfig);
+const uploadDir = path.join(__dirname, '../uploads/profiles');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
-// Multer configuration for image uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/profiles/');
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `profile-${req.user.id}-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'profile-' + req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
 });
 
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
 
-// Middleware to check authentication
-const authenticateUser = async (req, res, next) => {
-  // This should be replaced with your actual authentication logic (JWT, session, etc.)
-  const userId = req.session?.userId || req.headers['x-user-id'];
-  
-  if (!userId) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  
-  req.user = { id: userId };
-  next();
+    if (mimetype && extname) {
+        return cb(null, true);
+    } else {
+        cb(new Error('Only image files are allowed!'));
+    }
 };
 
-// Get user profile
-router.get('/api/user/profile', authenticateUser, async (req, res) => {
-  try {
-    const [users] = await pool.execute(
-      `SELECT id, name, email, phone, role, personality_profile, 
-              profile_image, created_at, last_login, is_verified,
-              date_of_birth, gender, address, city, state, country, postal_code
-       FROM users WHERE id = ?`,
-      [req.user.id]
-    );
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: fileFilter
+});
 
-    if (users.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+// ============================================
+// ROUTES (All Protected with authMiddleware)
+// ============================================
+
+// Get Profile
+router.get('/profile', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const [users] = await pool.execute(
+            `SELECT id, name as full_name, email, phone, date_of_birth, address, city, 
+                    country, profile_picture, role, created_at 
+             FROM users WHERE id = ?`,
+            [userId]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        res.json({ success: true, user: users[0] });
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
+});
 
-    const user = users[0];
-    if (user.personality_profile) {
-      user.personality_profile = JSON.parse(user.personality_profile);
+// Update Profile
+router.put('/profile', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { full_name, phone, date_of_birth, address, city, country } = req.body;
+
+        if (!full_name) {
+            return res.status(400).json({ success: false, error: 'Full name is required' });
+        }
+
+        await pool.execute(
+            `UPDATE users 
+             SET name = ?, phone = ?, date_of_birth = ?, address = ?, city = ?, country = ?
+             WHERE id = ?`,
+            [full_name, phone || null, date_of_birth || null, address || null, city || null, country || 'India', userId]
+        );
+
+        res.json({ success: true, message: 'Profile updated successfully' });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
-
-    res.json(user);
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    res.status(500).json({ error: 'Failed to fetch profile' });
-  }
 });
 
-// Update user profile
-router.put('/api/user/profile', authenticateUser, async (req, res) => {
-  try {
-    const {
-      name, phone, date_of_birth, gender,
-      address, city, state, country, postal_code,
-      personality_profile
-    } = req.body;
+// Upload Profile Picture
+router.post('/upload-profile-picture', authMiddleware, upload.single('profile_picture'), async (req, res) => {
+    try {
+        const userId = req.user.id;
 
-    await pool.execute(
-      `UPDATE users SET 
-        name = ?, phone = ?, date_of_birth = ?, gender = ?,
-        address = ?, city = ?, state = ?, country = ?, postal_code = ?,
-        personality_profile = ?
-       WHERE id = ?`,
-      [
-        name, phone, date_of_birth, gender,
-        address, city, state, country, postal_code,
-        JSON.stringify(personality_profile),
-        req.user.id
-      ]
-    );
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'No file uploaded' });
+        }
 
-    res.json({ success: true, message: 'Profile updated successfully' });
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({ error: 'Failed to update profile' });
-  }
-});
+        const [users] = await pool.execute('SELECT profile_picture FROM users WHERE id = ?', [userId]);
+        const oldPicture = users[0]?.profile_picture;
 
-// Upload profile image
-router.post('/api/user/profile-image', authenticateUser, upload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image uploaded' });
+        if (oldPicture) {
+            const oldPath = path.join(__dirname, '../uploads/profiles', path.basename(oldPicture));
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
+        }
+
+        const imageUrl = `/uploads/profiles/${req.file.filename}`;
+        await pool.execute('UPDATE users SET profile_picture = ? WHERE id = ?', [imageUrl, userId]);
+
+        res.json({ success: true, message: 'Profile picture uploaded successfully', imageUrl: imageUrl });
+    } catch (error) {
+        console.error('Upload profile picture error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
-
-    const imageUrl = `/uploads/profiles/${req.file.filename}`;
-    
-    await pool.execute(
-      'UPDATE users SET profile_image = ? WHERE id = ?',
-      [imageUrl, req.user.id]
-    );
-
-    res.json({ success: true, imageUrl });
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    res.status(500).json({ error: 'Failed to upload image' });
-  }
 });
 
-// Get user bookings
-router.get('/api/user/bookings', authenticateUser, async (req, res) => {
-  try {
-    const [bookings] = await pool.execute(
-      `SELECT 
-        b.id, b.booking_reference, b.tour_destination, b.tour_date,
-        b.departure, b.adults, b.children, b.infants, b.amount,
-        b.discount_amount, b.payment_status, b.status, b.booking_date,
-        p.title as packageName, p.duration_days,
-        pl.name as destination, pl.image_url,
-        c.name as country
-       FROM bookings b
-       LEFT JOIN packages p ON b.package_id = p.id
-       LEFT JOIN places pl ON p.place_id = pl.id
-       LEFT JOIN countries c ON pl.country_id = c.id
-       WHERE b.user_id = ?
-       ORDER BY b.booking_date DESC`,
-      [req.user.id]
-    );
+// Get Bookings
+router.get('/bookings', authMiddleware, async (req, res) => {
+    try {
+        const userEmail = req.user.email;
+        const [bookings] = await pool.execute(
+            `SELECT b.*, p.title as packageName, pl.name as placeName
+             FROM bookings b
+             LEFT JOIN packages p ON b.tour_destination = p.title
+             LEFT JOIN places pl ON b.tour_destination = pl.name
+             WHERE b.email = ?
+             ORDER BY b.booking_date DESC`,
+            [userEmail]
+        );
 
-    res.json(bookings);
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-    res.status(500).json({ error: 'Failed to fetch bookings' });
-  }
-});
-
-// Get user wishlist
-router.get('/api/user/wishlist', authenticateUser, async (req, res) => {
-  try {
-    const [wishlist] = await pool.execute(
-      `SELECT 
-        w.id, w.notes, w.created_at,
-        pl.id as place_id, pl.name, pl.image_url, 
-        pl.price_per_person, pl.rating,
-        c.name as country,
-        p.id as package_id, p.title as package_name, p.price as package_price
-       FROM wishlist w
-       LEFT JOIN places pl ON w.place_id = pl.id
-       LEFT JOIN packages p ON w.package_id = p.id
-       LEFT JOIN countries c ON pl.country_id = c.id
-       WHERE w.user_id = ?
-       ORDER BY w.created_at DESC`,
-      [req.user.id]
-    );
-
-    res.json(wishlist);
-  } catch (error) {
-    console.error('Error fetching wishlist:', error);
-    res.status(500).json({ error: 'Failed to fetch wishlist' });
-  }
-});
-
-// Add to wishlist
-router.post('/api/user/wishlist', authenticateUser, async (req, res) => {
-  try {
-    const { place_id, package_id, notes, notify_price_drop } = req.body;
-
-    await pool.execute(
-      `INSERT INTO wishlist (user_id, place_id, package_id, notes, notify_price_drop)
-       VALUES (?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE 
-       notes = VALUES(notes), notify_price_drop = VALUES(notify_price_drop)`,
-      [req.user.id, place_id, package_id, notes, notify_price_drop]
-    );
-
-    res.json({ success: true, message: 'Added to wishlist' });
-  } catch (error) {
-    console.error('Error adding to wishlist:', error);
-    res.status(500).json({ error: 'Failed to add to wishlist' });
-  }
-});
-
-// Remove from wishlist
-router.delete('/api/user/wishlist/:id', authenticateUser, async (req, res) => {
-  try {
-    await pool.execute(
-      'DELETE FROM wishlist WHERE id = ? AND user_id = ?',
-      [req.params.id, req.user.id]
-    );
-
-    res.json({ success: true, message: 'Removed from wishlist' });
-  } catch (error) {
-    console.error('Error removing from wishlist:', error);
-    res.status(500).json({ error: 'Failed to remove from wishlist' });
-  }
-});
-
-// Get user reviews
-router.get('/api/user/reviews', authenticateUser, async (req, res) => {
-  try {
-    const [reviews] = await pool.execute(
-      `SELECT 
-        r.id, r.rating, r.title, r.review_text, r.helpful_count,
-        r.images, r.status, r.created_at,
-        pl.name as place_name, pl.image_url as place_image,
-        p.title as package_name
-       FROM reviews r
-       LEFT JOIN places pl ON r.place_id = pl.id
-       LEFT JOIN packages p ON r.package_id = p.id
-       WHERE r.user_id = ?
-       ORDER BY r.created_at DESC`,
-      [req.user.id]
-    );
-
-    // Parse JSON fields
-    reviews.forEach(review => {
-      if (review.images) {
-        review.images = JSON.parse(review.images);
-      }
-    });
-
-    res.json(reviews);
-  } catch (error) {
-    console.error('Error fetching reviews:', error);
-    res.status(500).json({ error: 'Failed to fetch reviews' });
-  }
-});
-
-// Get user statistics
-router.get('/api/user/stats', authenticateUser, async (req, res) => {
-  try {
-    // Total bookings
-    const [bookingStats] = await pool.execute(
-      'SELECT COUNT(*) as totalBookings FROM bookings WHERE user_id = ?',
-      [req.user.id]
-    );
-
-    // Places visited (completed bookings)
-    const [placesStats] = await pool.execute(
-      `SELECT COUNT(DISTINCT pl.id) as placesVisited 
-       FROM bookings b
-       JOIN packages p ON b.package_id = p.id
-       JOIN places pl ON p.place_id = pl.id
-       WHERE b.user_id = ? AND b.status = 'completed'`,
-      [req.user.id]
-    );
-
-    // Wishlist count
-    const [wishlistStats] = await pool.execute(
-      'SELECT COUNT(*) as wishlistCount FROM wishlist WHERE user_id = ?',
-      [req.user.id]
-    );
-
-    // Reviews count
-    const [reviewStats] = await pool.execute(
-      'SELECT COUNT(*) as reviewsCount FROM reviews WHERE user_id = ?',
-      [req.user.id]
-    );
-
-    res.json({
-      totalBookings: bookingStats[0].totalBookings,
-      placesVisited: placesStats[0].placesVisited,
-      wishlistCount: wishlistStats[0].wishlistCount,
-      reviewsCount: reviewStats[0].reviewsCount
-    });
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Failed to fetch statistics' });
-  }
-});
-
-// Get notifications
-router.get('/api/user/notifications', authenticateUser, async (req, res) => {
-  try {
-    const [notifications] = await pool.execute(
-      `SELECT id, type, title, message, data, is_read, created_at, read_at
-       FROM notifications
-       WHERE user_id = ?
-       ORDER BY created_at DESC
-       LIMIT 20`,
-      [req.user.id]
-    );
-
-    // Parse JSON data field
-    notifications.forEach(notif => {
-      if (notif.data) {
-        notif.data = JSON.parse(notif.data);
-      }
-    });
-
-    res.json(notifications);
-  } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({ error: 'Failed to fetch notifications' });
-  }
-});
-
-// Mark notification as read
-router.put('/api/user/notifications/:id/read', authenticateUser, async (req, res) => {
-  try {
-    await pool.execute(
-      'UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE id = ? AND user_id = ?',
-      [req.params.id, req.user.id]
-    );
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({ error: 'Failed to update notification' });
-  }
-});
-
-// Change password
-router.post('/api/user/change-password', authenticateUser, async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-
-    // Get current password hash
-    const [users] = await pool.execute(
-      'SELECT password_hash FROM users WHERE id = ?',
-      [req.user.id]
-    );
-
-    if (users.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+        res.json({ success: true, bookings: bookings });
+    } catch (error) {
+        console.error('Get bookings error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
-
-    // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, users[0].password_hash);
-    if (!isValidPassword) {
-      return res.status(400).json({ error: 'Current password is incorrect' });
-    }
-
-    // Hash new password
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
-    // Update password
-    await pool.execute(
-      'UPDATE users SET password_hash = ? WHERE id = ?',
-      [newPasswordHash, req.user.id]
-    );
-
-    res.json({ success: true, message: 'Password changed successfully' });
-  } catch (error) {
-    console.error('Error changing password:', error);
-    res.status(500).json({ error: 'Failed to change password' });
-  }
 });
 
-// Get booking details
-router.get('/api/user/bookings/:id', authenticateUser, async (req, res) => {
-  try {
-    const [bookings] = await pool.execute(
-      `SELECT 
-        b.*,
-        p.title as packageName, p.description as packageDescription,
-        p.duration_days, p.itinerary, p.services,
-        pl.name as destination, pl.description as destinationDescription,
-        c.name as country
-       FROM bookings b
-       LEFT JOIN packages p ON b.package_id = p.id
-       LEFT JOIN places pl ON p.place_id = pl.id
-       LEFT JOIN countries c ON pl.country_id = c.id
-       WHERE b.id = ? AND b.user_id = ?`,
-      [req.params.id, req.user.id]
-    );
+// Get Stats
+router.get('/stats', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userEmail = req.user.email;
 
-    if (bookings.length === 0) {
-      return res.status(404).json({ error: 'Booking not found' });
+        const [bookingCount] = await pool.execute('SELECT COUNT(*) as count FROM bookings WHERE email = ?', [userEmail]);
+        const [completedCount] = await pool.execute("SELECT COUNT(*) as count FROM bookings WHERE email = ? AND status = 'completed'", [userEmail]);
+        const [wishlistCount] = await pool.execute('SELECT COUNT(*) as count FROM wishlist WHERE user_id = ?', [userId]);
+        const [reviewsCount] = await pool.execute('SELECT COUNT(*) as count FROM reviews WHERE user_id = ?', [userId]);
+
+        res.json({
+            success: true,
+            stats: {
+                totalBookings: bookingCount[0].count,
+                placesVisited: completedCount[0].count,
+                wishlistCount: wishlistCount[0].count,
+                reviewsCount: reviewsCount[0].count
+            }
+        });
+    } catch (error) {
+        console.error('Get stats error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
-
-    const booking = bookings[0];
-
-    // Get passengers
-    const [passengers] = await pool.execute(
-      'SELECT * FROM passengers WHERE booking_id = ?',
-      [booking.id]
-    );
-
-    booking.passengers = passengers;
-
-    res.json(booking);
-  } catch (error) {
-    console.error('Error fetching booking details:', error);
-    res.status(500).json({ error: 'Failed to fetch booking details' });
-  }
 });
 
-module.exports = router;
+// Get Wishlist
+router.get('/wishlist', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const [wishlist] = await pool.execute(
+            `SELECT w.*, p.*, pl.name as place_name, pl.image_url, c.name as country_name
+             FROM wishlist w
+             INNER JOIN packages p ON w.package_id = p.id
+             INNER JOIN places pl ON w.place_id = pl.id
+             INNER JOIN countries c ON pl.country_id = c.id
+             WHERE w.user_id = ?
+             ORDER BY w.added_date DESC`,
+            [userId]
+        );
+
+        res.json({ success: true, wishlist: wishlist });
+    } catch (error) {
+        console.error('Get wishlist error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Add to Wishlist
+router.post('/wishlist/:packageId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const packageId = req.params.packageId;
+        const { notes } = req.body;
+
+        const [packages] = await pool.execute('SELECT place_id FROM packages WHERE id = ?', [packageId]);
+        if (packages.length === 0) {
+            return res.status(404).json({ success: false, error: 'Package not found' });
+        }
+
+        const placeId = packages[0].place_id;
+        const [existing] = await pool.execute('SELECT id FROM wishlist WHERE user_id = ? AND package_id = ?', [userId, packageId]);
+
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, error: 'Already in wishlist' });
+        }
+
+        await pool.execute('INSERT INTO wishlist (user_id, package_id, place_id, notes) VALUES (?, ?, ?, ?)', [userId, packageId, placeId, notes || null]);
+
+        res.json({ success: true, message: 'Added to wishlist successfully' });
+    } catch (error) {
+        console.error('Add to wishlist error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Remove from Wishlist
+router.delete('/wishlist/:packageId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const packageId = req.params.packageId;
+
+        const [result] = await pool.execute('DELETE FROM wishlist WHERE user_id = ? AND package_id = ?', [userId, packageId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Item not found in wishlist' });
+        }
+
+        res.json({ success: true, message: 'Removed from wishlist successfully' });
+    } catch (error) {
+        console.error('Remove from wishlist error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Get Reviews
+router.get('/reviews', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const [reviews] = await pool.execute(
+            `SELECT r.*, b.tour_destination, b.tour_date, pl.name as place_name, pl.image_url as place_image, p.title as package_name
+             FROM reviews r
+             INNER JOIN bookings b ON r.booking_id = b.id
+             LEFT JOIN places pl ON r.place_id = pl.id
+             LEFT JOIN packages p ON r.package_id = p.id
+             WHERE r.user_id = ?
+             ORDER BY r.created_at DESC`,
+            [userId]
+        );
+
+        res.json({ success: true, reviews: reviews });
+    } catch (error) {
+        console.error('Get reviews error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Get Bookings for Review
+router.get('/bookings-for-review', authMiddleware, async (req, res) => {
+    try {
+        const userEmail = req.user.email;
+        const [bookings] = await pool.execute(
+            `SELECT b.*, p.id as package_id, p.title as package_name, pl.id as place_id, pl.name as place_name
+             FROM bookings b
+             LEFT JOIN packages p ON b.tour_destination = p.title
+             LEFT JOIN places pl ON b.tour_destination = pl.name
+             LEFT JOIN reviews r ON r.booking_id = b.id
+             WHERE b.email = ? AND b.status = 'completed' AND r.id IS NULL
+             ORDER BY b.tour_date DESC`,
+            [userEmail]
+        );
+
+        res.json({ success: true, bookings: bookings });
+    } catch (error) {
+        console.error('Get bookings for review error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Get Notifications
+router.get('/notifications', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { limit = 20, unread_only = false } = req.query;
+
+        let query = `SELECT id, type, title, message, link, is_read, created_at FROM notifications WHERE user_id = ?`;
+        if (unread_only === 'true') query += ' AND is_read = FALSE';
+        query += ' ORDER BY created_at DESC LIMIT ?';
+
+        const [notifications] = await pool.execute(query, [userId, parseInt(limit)]);
+        const [countResult] = await pool.execute('SELECT COUNT(*) as unread_count FROM notifications WHERE user_id = ? AND is_read = FALSE', [userId]);
+
+        res.json({ success: true, notifications: notifications, unread_count: countResult[0].unread_count });
+    } catch (error) {
+        console.error('Get notifications error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Mark Notification as Read
+router.put('/notifications/:id/read', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const notificationId = req.params.id;
+
+        const [result] = await pool.execute('UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?', [notificationId, userId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Notification not found' });
+        }
+
+        res.json({ success: true, message: 'Notification marked as read' });
+    } catch (error) {
+        console.error('Mark notification as read error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Mark All Notifications as Read
+router.put('/notifications/read-all', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        await pool.execute('UPDATE notifications SET is_read = TRUE WHERE user_id = ? AND is_read = FALSE', [userId]);
+
+        res.json({ success: true, message: 'All notifications marked as read' });
+    } catch (error) {
+        console.error('Mark all notifications as read error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+export default router;

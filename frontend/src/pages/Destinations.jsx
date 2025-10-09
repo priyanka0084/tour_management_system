@@ -19,6 +19,8 @@ const Destinations = () => {
 
   useEffect(() => {
     fetchCountries();
+  const interval = setInterval(fetchCountries, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchCountries = async () => {
@@ -62,7 +64,13 @@ const Destinations = () => {
       setLoading(false);
     }
   };
-
+  const handleRefresh = () => {
+    if (selectedCountry) {
+      fetchPlacesByCountry(selectedCountry.id);
+    } else {
+      fetchCountries();
+    }
+  };
   const processImageUrl = (url) => {
     if (!url || url.trim() === '') return 'https://via.placeholder.com/300x300?text=No+Image';
 
@@ -90,6 +98,7 @@ const Destinations = () => {
     setSelectedSearchCountry(null);
     setSearchResults([]);
     setSearchQuery('');
+    fetchCountries();
   };
 
   const handleViewPackages = (placeId) => {

@@ -8,6 +8,8 @@ import BookingPayment from './pages/BookingPayment';
 import BookingConfirmation from './pages/BookingConfirmation';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -55,6 +57,10 @@ function AppRoutes() {
       <Route path="/booking-confirmation" element={<BookingConfirmation />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      
+      {/* Password Reset Routes */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       
       {/* Protected User Route */}
       <Route

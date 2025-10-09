@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 // Secret keys (in production, use environment variables)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
 
 // Generate Access Token (15 minutes expiry)
-const generateAccessToken = (user) => {
+export const generateAccessToken = (user) => {
   return jwt.sign(
     {
       id: user.id,
@@ -19,7 +19,7 @@ const generateAccessToken = (user) => {
 };
 
 // Generate Refresh Token (7 days expiry)
-const generateRefreshToken = (user) => {
+export const generateRefreshToken = (user) => {
   return jwt.sign(
     { id: user.id },
     JWT_REFRESH_SECRET,
@@ -28,7 +28,7 @@ const generateRefreshToken = (user) => {
 };
 
 // Verify Access Token
-const verifyAccessToken = (token) => {
+export const verifyAccessToken = (token) => {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (error) {
@@ -37,17 +37,10 @@ const verifyAccessToken = (token) => {
 };
 
 // Verify Refresh Token
-const verifyRefreshToken = (token) => {
+export const verifyRefreshToken = (token) => {
   try {
     return jwt.verify(token, JWT_REFRESH_SECRET);
   } catch (error) {
     return null;
   }
-};
-
-module.exports = {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyAccessToken,
-  verifyRefreshToken
 };

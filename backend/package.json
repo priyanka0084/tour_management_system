@@ -1,6 +1,7 @@
 {
   "name": "tour-booking-backend",
   "version": "1.0.0",
+  "type": "module", 
   "description": "Backend for tour booking and payment system",
   "main": "server.js",
   "scripts": {
@@ -28,8 +29,10 @@
     "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
+    "multer": "^2.0.2",
     "mysql2": "^3.15.1",
-    "nodemailer": "^7.0.6"
+    "nodemailer": "^7.0.6",
+    "twilio": "^5.10.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

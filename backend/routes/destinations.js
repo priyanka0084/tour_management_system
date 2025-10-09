@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const { pool } = require('../db');
+import express from 'express';
+import { pool } from '../db.js';
 
+const router = express.Router();
 // GET /api/destinations - Get all destinations (places)
 router.get('/', async (req, res) => {
     try {
@@ -204,4 +204,4 @@ router.post('/seed', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;
