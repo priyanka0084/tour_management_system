@@ -4,16 +4,20 @@ import {
   Trash2, ShoppingCart, Eye, Star 
 } from 'lucide-react';
 
-const WishlistCard = ({ item, onRemove, onBookNow, onViewDetails }) => {
+const WishlistCard = ({ item, onRemove, onBookNow }) => {
   const [isRemoving, setIsRemoving] = useState(false);
 
   const handleRemove = async () => {
-    setIsRemoving(true);
-    await onRemove(item.package_id);
+    if (window.confirm(`Remove ${item.place_name} from wishlist?`)) {
+      setIsRemoving(true);
+      await onRemove(item.wishlist_id); // ✅ FIXED: Use wishlist_id, not package_id
+      setIsRemoving(false);
+    }
   };
 
   // Format date
   const formatDate = (dateString) => {
+    if (!dateString) return 'Recently added';
     const options = { day: 'numeric', month: 'short', year: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
   };
@@ -22,8 +26,8 @@ const WishlistCard = ({ item, onRemove, onBookNow, onViewDetails }) => {
     <div className={`group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 ${
       isRemoving ? 'opacity-50 scale-95' : ''
     }`}>
-      {/* Image Container */}
-      <div className="relative h-56 overflow-hidden">
+      {/* Image Container - FIXED HEIGHT TO MATCH CART */}
+      <div className="relative h-48 overflow-hidden">
         <img 
           src={item.image_url || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800'}
           alt={item.place_name}
@@ -49,62 +53,52 @@ const WishlistCard = ({ item, onRemove, onBookNow, onViewDetails }) => {
           <MapPin className="w-4 h-4 text-teal-600" />
           <span className="text-sm font-semibold text-gray-800">{item.country_name}</span>
         </div>
+
+        {/* Rating Badge - TOP LEFT */}
+        {item.rating && (
+          <div className="absolute top-4 left-4 flex items-center gap-1 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full">
+            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+            <span className="text-sm font-semibold text-gray-800">{item.rating}/5</span>
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="p-5">
         {/* Title */}
         <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1 group-hover:text-teal-600 transition-colors">
-          {item.title}
+          {item.place_name}
         </h3>
 
-        {/* Place Name */}
-        <p className="text-sm text-gray-600 mb-3 flex items-center gap-1">
-          <MapPin className="w-4 h-4" />
-          {item.place_name}
-        </p>
-
         {/* Description */}
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-          {item.description || 'Discover this amazing destination with unforgettable experiences.'}
+        <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[40px]">
+          {item.place_description || 'Discover this amazing destination with unforgettable experiences.'}
         </p>
 
-        {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <Calendar className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Duration</p>
-              <p className="text-sm font-semibold text-gray-800">{item.duration_days} Days</p>
+        {/* Details Grid - FIXED ALIGNMENT */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+            <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <div className="flex flex-col">
+              <p className="text-xs text-gray-500 font-medium">Duration</p>
+              <p className="text-sm font-bold text-gray-800">{item.duration_days} Days</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-green-50 rounded-lg">
-              <DollarSign className="w-4 h-4 text-green-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Price</p>
-              <p className="text-sm font-semibold text-gray-800">₹{item.price?.toLocaleString('en-IN')}</p>
+          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+            <DollarSign className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <div className="flex flex-col">
+              <p className="text-xs text-gray-500 font-medium">Price</p>
+              <p className="text-sm font-bold text-gray-800">₹{item.price_per_person?.toLocaleString('en-IN')}</p>
             </div>
           </div>
         </div>
 
         {/* Added Date */}
-        <p className="text-xs text-gray-500 mb-3">
-          Added on {formatDate(item.added_date)}
+        <p className="text-xs text-gray-500 mb-4 flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          Added on {formatDate(item.added_at)}
         </p>
-
-        {/* Notes */}
-        {item.notes && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-xs text-gray-700">
-              <span className="font-semibold">Note:</span> {item.notes}
-            </p>
-          </div>
-        )}
 
         {/* Action Buttons */}
         <div className="flex gap-2">
@@ -117,8 +111,9 @@ const WishlistCard = ({ item, onRemove, onBookNow, onViewDetails }) => {
           </button>
           
           <button
-            onClick={() => onViewDetails(item)}
+            onClick={() => onBookNow(item)}
             className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-300 font-medium"
+            title="View Details"
           >
             <Eye className="w-4 h-4" />
           </button>
@@ -130,5 +125,8 @@ const WishlistCard = ({ item, onRemove, onBookNow, onViewDetails }) => {
     </div>
   );
 };
+
+// Import Clock icon at top
+import { Clock } from 'lucide-react';
 
 export default WishlistCard;

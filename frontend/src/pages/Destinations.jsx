@@ -5,11 +5,16 @@ import config from '../config';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import '../styles/destinations.css';
+import { Heart } from 'lucide-react';
+import { useWishlist } from '../context/WishlistContext';
+import { toast } from 'react-toastify';
 
 
 const Destinations = () => {
   const navigate = useNavigate();
   const { addToCart, isInCart } = useCart();
+  const { addToWishlist, isInWishlist } = useWishlist();
+
 const { isAuthenticated } = useAuth();
   const [countries, setCountries] = useState([]);
   const [places, setPlaces] = useState([]);
@@ -133,7 +138,36 @@ const { isAuthenticated } = useAuth();
   }
 };
 
+const handleAddToWishlist = async (place) => {
+  // Check if user is logged in
+  if (!isAuthenticated) {
+    toast.error('Please login to add items to wishlist', {
+      position: 'top-right',
+      autoClose: 2000
+    });
+    
+    setTimeout(() => {
+      navigate('/login');
+    }, 1000);
+    return;
+  }
 
+  // Check if already in wishlist
+  if (isInWishlist(place.id)) {
+    toast.warning('This place is already in your wishlist!', {
+      position: 'top-right',
+      autoClose: 2000
+    });
+    return;
+  }
+
+  // Add to wishlist
+  const result = await addToWishlist(place);
+  
+  if (result.success) {
+    // Success toast is already shown in WishlistContext
+  }
+};
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -343,19 +377,58 @@ const { isAuthenticated } = useAuth();
                   </div>
 
                   <div className="place-actions">
-                    <button
-                      className="add-to-cart-btn"
-                      onClick={() => handleAddToCart(place)}
-                    >
-                      🛒 Add to Cart
-                    </button>
-                    <button
-                      className="view-btn"
-                      onClick={() => handleViewPackages(place.id)}
-                    >
-                      👁️ View Packages
-                    </button>
-                  </div>
+  <button
+    className="wishlist-btn"
+    onClick={(e) => {
+      e.stopPropagation();
+      handleAddToWishlist(place);
+    }}
+    disabled={isInWishlist(place.id)}
+    style={{
+      background: isInWishlist(place.id) ? '#ec4899' : 'white',
+      color: isInWishlist(place.id) ? 'white' : '#ec4899',
+      border: `2px solid #ec4899`,
+      padding: '12px',
+      borderRadius: '8px',
+      cursor: isInWishlist(place.id) ? 'not-allowed' : 'pointer',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: '50px'
+    }}
+    title={isInWishlist(place.id) ? 'In Wishlist' : 'Add to Wishlist'}
+  >
+    <Heart 
+      style={{
+        width: '20px',
+        height: '20px',
+        fill: isInWishlist(place.id) ? 'white' : 'none'
+      }}
+    />
+  </button>
+
+  <button
+    className="add-to-cart-btn"
+    onClick={() => handleAddToCart(place)}
+    disabled={isInCart(place.id)}
+    style={{
+      opacity: isInCart(place.id) ? 0.6 : 1,
+      cursor: isInCart(place.id) ? 'not-allowed' : 'pointer',
+      background: isInCart(place.id) ? '#94a3b8' : '#27ae60',
+      flex: 1
+    }}
+  >
+    {isInCart(place.id) ? '✓ In Cart' : '🛒 Add to Cart'}
+  </button>
+
+  <button
+    className="view-btn"
+    onClick={() => handleViewPackages(place.id)}
+  >
+    👁️ View Packages
+  </button>
+</div>
                 </div>
               </div>
             ))}

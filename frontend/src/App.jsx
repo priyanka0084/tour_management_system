@@ -15,6 +15,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext'; // ✨ NEW IMPORT
 import FloatingChatbot from './components/home/FloatingChatbot';
+import { WishlistProvider } from './context/WishlistContext';
 import { ToastContainer } from 'react-toastify'; // ✨ NEW IMPORT
 import 'react-toastify/dist/ReactToastify.css'; // ✨ NEW IMPORT
 import './App.css';
@@ -96,12 +97,14 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <CartProvider> {/* ✨ NEW: CartProvider wraps everything */}
-          <div className="App">
-            <AppRoutes />
-            <FloatingChatbot />
-            <ToastContainer /> {/* ✨ NEW: Toast notifications container */}
-          </div>
+        <CartProvider>
+          <WishlistProvider> {/* ✨ NEW: WishlistProvider wraps everything */}
+            <div className="App">
+              <AppRoutes />
+              <FloatingChatbot />
+              <ToastContainer />
+            </div>
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </Router>

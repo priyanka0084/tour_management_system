@@ -18,7 +18,7 @@ import WishlistCard from '../components/dashboard/WishlistCard';
 import ReviewCard from '../components/dashboard/ReviewCard';
 import NotificationPanel from '../components/dashboard/NotificationPanel';
 import ProfileEditor from '../components/dashboard/ProfileEditor';
-
+import { useWishlist } from '../context/WishlistContext';
 // Import styles
 import '../styles/UserDashboard.css';
 
@@ -26,6 +26,7 @@ const UserDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { cartItems, cartCount, removeFromCart, clearCart, fetchCart } = useCart();
+  const { wishlistItems, wishlistCount, removeFromWishlist, clearWishlist } = useWishlist();
   // State Management
   const [activeTab, setActiveTab] = useState('overview');
   const [bookings, setBookings] = useState([]);
@@ -54,74 +55,71 @@ const UserDashboard = () => {
       fetchDashboardData();
     }
   }, [user]);
-
+useEffect(() => {
+  setStats(prev => ({
+    ...prev,
+    cartCount: cartCount,
+    wishlistCount: wishlistCount
+  }));
+}, [cartCount, wishlistCount]);
   // FIND THIS FUNCTION IN UserDashboard.jsx (around line 50-75)
 // REPLACE the fetchDashboardData function with this fixed version:
 const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch data - some endpoints might not exist yet, so we handle failures gracefully
-      const results = await Promise.allSettled([
-        api.get('/user/bookings'),
-        api.get('/user/wishlist'),
-        api.get('/user/reviews'),
-        api.get('/user/stats')
-      ]);
+  try {
+    setLoading(true);
+    
+    // Fetch data - some endpoints might not exist yet, so we handle failures gracefully
+    const results = await Promise.allSettled([
+      api.get('/user/bookings'),
+      api.get('/user/reviews'),
+      api.get('/user/stats')
+    ]);
 
-      // Extract responses
-      const [bookingsRes, wishlistRes, reviewsRes, statsRes] = results;
+    // Extract responses
+    const [bookingsRes, reviewsRes, statsRes] = results;
 
-      // Set bookings
-      if (bookingsRes.status === 'fulfilled') {
-        setBookings(bookingsRes.value.data.bookings || []);
-      } else {
-        console.warn('Failed to fetch bookings');
-        setBookings([]);
-      }
-
-      // Set wishlist
-      if (wishlistRes.status === 'fulfilled') {
-        setWishlist(wishlistRes.value.data.wishlist || []);
-      } else {
-        console.warn('Failed to fetch wishlist');
-        setWishlist([]);
-      }
-
-      // Set reviews
-      if (reviewsRes.status === 'fulfilled') {
-        setReviews(reviewsRes.value.data.reviews || []);
-      } else {
-        console.warn('Failed to fetch reviews');
-        setReviews([]);
-      }
-
-      // Set stats
-      if (statsRes.status === 'fulfilled') {
-        setStats({
-          totalBookings: statsRes.value.data.stats?.totalBookings || 0,
-          placesVisited: statsRes.value.data.stats?.placesVisited || 0,
-          cartCount: cartCount, // From CartContext
-          wishlistCount: statsRes.value.data.stats?.wishlistCount || 0,
-          reviewsCount: statsRes.value.data.stats?.reviewsCount || 0
-        });
-      } else {
-        console.warn('Failed to fetch stats');
-        setStats({
-          totalBookings: 0,
-          placesVisited: 0,
-          cartCount: cartCount,
-          wishlistCount: 0,
-          reviewsCount: 0
-        });
-      }
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
+    // Set bookings
+    if (bookingsRes.status === 'fulfilled') {
+      setBookings(bookingsRes.value.data.bookings || []);
+    } else {
+      console.warn('Failed to fetch bookings');
+      setBookings([]);
     }
-  };
+
+    // Set reviews
+    if (reviewsRes.status === 'fulfilled') {
+      setReviews(reviewsRes.value.data.reviews || []);
+    } else {
+      console.warn('Failed to fetch reviews');
+      setReviews([]);
+    }
+
+    // Set stats - KEEP cart and wishlist from context
+    if (statsRes.status === 'fulfilled') {
+      setStats({
+        totalBookings: statsRes.value.data.stats?.totalBookings || 0,
+        placesVisited: statsRes.value.data.stats?.placesVisited || 0,
+        cartCount: cartCount, // From CartContext
+        wishlistCount: wishlistCount, // From WishlistContext - will be updated by useEffect
+        reviewsCount: statsRes.value.data.stats?.reviewsCount || 0
+      });
+    } else {
+      console.warn('Failed to fetch stats');
+      setStats({
+        totalBookings: 0,
+        placesVisited: 0,
+        cartCount: cartCount,
+        wishlistCount: wishlistCount,
+        reviewsCount: 0
+      });
+    }
+
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   const handleClearCart = async () => {
@@ -170,20 +168,20 @@ const fetchDashboardData = async () => {
   };
 
   // Wishlist Management
-  const handleRemoveFromWishlist = async (packageId) => {
-    try {
-      const response = await api.delete(`/user/wishlist/${packageId}`);
-      
-      if (response.data.success) {
-        toast.success('Removed from wishlist');
-        setWishlist(wishlist.filter(item => item.package_id !== packageId));
-        setStats(prev => ({ ...prev, wishlistCount: prev.wishlistCount - 1 }));
-      }
-    } catch (error) {
-      console.error('Error removing from wishlist:', error);
-      toast.error('Failed to remove from wishlist');
-    }
-  };
+  const handleRemoveFromWishlist = async (wishlistId) => {
+  console.log('🗑️ Removing wishlist item with ID:', wishlistId); // Debug log
+  const result = await removeFromWishlist(wishlistId);
+  if (result.success) {
+    console.log('✅ Successfully removed from wishlist');
+  } else {
+    console.log('❌ Failed to remove from wishlist');
+  }
+};
+const handleClearWishlist = async () => {
+  if (window.confirm('Are you sure you want to clear your entire wishlist?')) {
+    const result = await clearWishlist();
+  }
+};
 
   
 
@@ -477,41 +475,52 @@ const handleBookNow = (item) => {
   );
 
   const renderWishlist = () => (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+  <div className="space-y-6">
+    {/* Header */}
+    <div className="flex items-center justify-between mb-6">
+      <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
         <Heart className="w-6 h-6 text-pink-600" />
-        My Wishlist
+        My Wishlist ({wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'})
       </h3>
-      
-      {wishlist.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="p-4 bg-pink-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-            <Heart className="w-10 h-10 text-pink-400" />
-          </div>
-          <h4 className="text-lg font-semibold text-gray-700 mb-2">No items in wishlist</h4>
-          <p className="text-gray-500 mb-4">Save your favorite destinations here!</p>
-          <button
-            onClick={() => navigate('/destinations')}
-            className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all duration-300 font-semibold"
-          >
-            Browse Destinations
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {wishlist.map((item) => (
-            <WishlistCard
-              key={item.id}
-              item={item}
-              onRemove={handleRemoveFromWishlist}
-              onBookNow={handleBookNow}
-              onViewDetails={handleViewPackageDetails}
-            />
-          ))}
-        </div>
+      {wishlistItems.length > 0 && (
+        <button
+          onClick={handleClearWishlist}
+          className="px-4 py-2 text-red-600 hover:text-red-700 font-semibold text-sm border border-red-300 rounded-lg hover:bg-red-50 transition-all"
+        >
+          Clear All
+        </button>
       )}
     </div>
-  );
+
+    {/* Wishlist Items */}
+    {wishlistItems.length === 0 ? (
+      <div className="text-center py-12 bg-white rounded-2xl shadow-lg">
+        <div className="p-4 bg-pink-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+          <Heart className="w-10 h-10 text-pink-400" />
+        </div>
+        <h4 className="text-lg font-semibold text-gray-700 mb-2">Your wishlist is empty</h4>
+        <p className="text-gray-500 mb-4">Save your favorite destinations here!</p>
+        <button
+          onClick={() => navigate('/destinations')}
+          className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+        >
+          Explore Destinations
+        </button>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {wishlistItems.map((item) => (
+          <WishlistCard
+            key={item.wishlist_id}
+            item={item}
+            onRemove={handleRemoveFromWishlist}
+            onBookNow={handleBookNow}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+);
   const renderCart = () => (
   <div className="space-y-6">
     {/* Header */}
@@ -864,40 +873,8 @@ const handleBookNow = (item) => {
           )}
         </div>
       )}
-
-      {activeTab === 'wishlist' && (
-        <div className="content-card">
-          <h3 className="content-card-title">
-            <Heart className="icon" />
-            My Wishlist
-          </h3>
-          {wishlist.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon icon-pink">
-                <Heart className="icon" />
-              </div>
-              <h4 className="empty-state-title">No items in wishlist</h4>
-              <p className="empty-state-text">Save your favorite destinations here!</p>
-              <button onClick={() => navigate('/destinations')} className="empty-state-btn">
-                Browse Destinations
-              </button>
-            </div>
-          ) : (
-            <div className="wishlist-grid">
-              {wishlist.map((item) => (
-                <WishlistCard
-                  key={item.id}
-                  item={item}
-                  onRemove={handleRemoveFromWishlist}
-                  onBookNow={handleBookNow}
-                  onViewDetails={handleViewPackageDetails}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
       {activeTab === 'cart' && renderCart()}
+      {activeTab === 'wishlist' && renderWishlist()}
       {activeTab === 'reviews' && (
         <div className="content-card">
           <h3 className="content-card-title">
