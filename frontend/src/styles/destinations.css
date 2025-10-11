@@ -304,3 +304,124 @@
     margin-bottom: 5px;
   }
 }
+/* ==================== WISHLIST BUTTON STYLES ==================== */
+/* Add these styles to your destinations.css file */
+
+.place-actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.wishlist-btn {
+  background: white;
+  color: #ec4899;
+  border: 2px solid #ec4899;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  position: relative;
+}
+
+.wishlist-btn:hover:not(:disabled) {
+  background: #ec4899;
+  color: white;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+
+.wishlist-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.wishlist-btn.active {
+  background: #ec4899;
+  color: white;
+}
+
+.wishlist-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: all 0.3s ease;
+}
+
+.wishlist-btn:hover:not(:disabled) svg {
+  animation: heartBeat 0.6s ease-in-out;
+}
+
+@keyframes heartBeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  75% {
+    transform: scale(1.1);
+  }
+}
+
+/* Update add-to-cart-btn to flex grow */
+.add-to-cart-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #27ae60;
+  color: white;
+}
+
+.add-to-cart-btn:hover:not(:disabled) {
+  background: #229954;
+  transform: translateY(-2px);
+}
+
+.view-btn {
+  flex: 1;
+  padding: 12px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-btn:hover {
+  background: #2980b9;
+  transform: translateY(-2px);
+}
+
+/* Responsive Design for Buttons */
+@media (max-width: 768px) {
+  .place-actions {
+    flex-wrap: wrap;
+  }
+
+  .wishlist-btn {
+    order: -1;
+    min-width: 48px;
+  }
+
+  .add-to-cart-btn,
+  .view-btn {
+    flex: 1 1 calc(50% - 5px);
+  }
+}

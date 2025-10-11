@@ -8,7 +8,9 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { toast } from 'react-toastify';
-
+import { ShoppingCart } from 'lucide-react'; // Add ShoppingCart to existing lucide imports
+import { useCart } from '../context/CartContext';
+import CartCard from '../components/dashboard/CartCard';
 // Import custom components
 import StatsCard from '../components/dashboard/StatsCard';
 import BookingCard from '../components/dashboard/BookingCard';
@@ -23,7 +25,7 @@ import '../styles/UserDashboard.css';
 const UserDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  
+  const { cartItems, cartCount, removeFromCart, clearCart, fetchCart } = useCart();
   // State Management
   const [activeTab, setActiveTab] = useState('overview');
   const [bookings, setBookings] = useState([]);
@@ -33,6 +35,7 @@ const UserDashboard = () => {
     totalBookings: 0,
     placesVisited: 0,
     wishlistCount: 0,
+    cartCount: 0, 
     reviewsCount: 0
   });
   const [notifications, setNotifications] = useState([]);
@@ -41,7 +44,10 @@ const UserDashboard = () => {
   const [editProfile, setEditProfile] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  useEffect(() => {
+  console.log('🛒 Cart Items State:', cartItems);
+  console.log('🛒 Cart Count State:', cartCount);
+}, [cartItems, cartCount]);
   // Fetch all dashboard data
   useEffect(() => {
     if (user) {
@@ -49,31 +55,83 @@ const UserDashboard = () => {
     }
   }, [user]);
 
-  const fetchDashboardData = async () => {
+  // FIND THIS FUNCTION IN UserDashboard.jsx (around line 50-75)
+// REPLACE the fetchDashboardData function with this fixed version:
+const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
-      const [bookingsRes, wishlistRes, reviewsRes, statsRes, notifRes] = await Promise.all([
+      // Fetch data - some endpoints might not exist yet, so we handle failures gracefully
+      const results = await Promise.allSettled([
         api.get('/user/bookings'),
         api.get('/user/wishlist'),
         api.get('/user/reviews'),
-        api.get('/user/stats'),
-        api.get('/user/notifications')
+        api.get('/user/stats')
       ]);
 
-      setBookings(bookingsRes.data.bookings || []);
-      setWishlist(wishlistRes.data.wishlist || []);
-      setReviews(reviewsRes.data.reviews || []);
-      setStats(statsRes.data.stats || {});
-      setNotifications(notifRes.data.notifications || []);
-      setUnreadCount(notifRes.data.unread_count || 0);
+      // Extract responses
+      const [bookingsRes, wishlistRes, reviewsRes, statsRes] = results;
+
+      // Set bookings
+      if (bookingsRes.status === 'fulfilled') {
+        setBookings(bookingsRes.value.data.bookings || []);
+      } else {
+        console.warn('Failed to fetch bookings');
+        setBookings([]);
+      }
+
+      // Set wishlist
+      if (wishlistRes.status === 'fulfilled') {
+        setWishlist(wishlistRes.value.data.wishlist || []);
+      } else {
+        console.warn('Failed to fetch wishlist');
+        setWishlist([]);
+      }
+
+      // Set reviews
+      if (reviewsRes.status === 'fulfilled') {
+        setReviews(reviewsRes.value.data.reviews || []);
+      } else {
+        console.warn('Failed to fetch reviews');
+        setReviews([]);
+      }
+
+      // Set stats
+      if (statsRes.status === 'fulfilled') {
+        setStats({
+          totalBookings: statsRes.value.data.stats?.totalBookings || 0,
+          placesVisited: statsRes.value.data.stats?.placesVisited || 0,
+          cartCount: cartCount, // From CartContext
+          wishlistCount: statsRes.value.data.stats?.wishlistCount || 0,
+          reviewsCount: statsRes.value.data.stats?.reviewsCount || 0
+        });
+      } else {
+        console.warn('Failed to fetch stats');
+        setStats({
+          totalBookings: 0,
+          placesVisited: 0,
+          cartCount: cartCount,
+          wishlistCount: 0,
+          reviewsCount: 0
+        });
+      }
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
+  };
+
+
+  const handleClearCart = async () => {
+    if (window.confirm('Are you sure you want to clear your entire cart?')) {
+      const result = await clearCart();
+    }
+  };
+
+  const handleCartBookNow = (item) => {
+    navigate(`/packages/${item.place_id}`);
   };
 
   // Profile Management
@@ -127,11 +185,7 @@ const UserDashboard = () => {
     }
   };
 
-  const handleBookNow = (item) => {
-    navigate(`/packages/${item.place_id}`, { 
-      state: { selectedPackage: item } 
-    });
-  };
+  
 
   const handleViewPackageDetails = (item) => {
     navigate(`/packages/${item.place_id}`);
@@ -178,7 +232,20 @@ const UserDashboard = () => {
     setNotifications(notifications.filter(n => n.id !== notificationId));
     toast.success('Notification deleted');
   };
+  const handleRemoveFromCart = async (cartId) => {
+  const result = await removeFromCart(cartId);
+  if (result.success) {
+    // Cart is already updated in CartContext
+    // Optionally refresh dashboard data
+  }
+};
 
+
+
+const handleBookNow = (item) => {
+  // Navigate to packages page for this place
+  navigate(`/packages/${item.place_id}`);
+};
   const handleNotificationClick = (notification) => {
     if (notification.link) {
       const path = notification.link.split('?')[0];
@@ -211,6 +278,7 @@ const UserDashboard = () => {
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'bookings', label: 'My Bookings', icon: Calendar },
     { id: 'wishlist', label: 'Wishlist', icon: Heart },
+    { id: 'cart', label: 'My Cart', icon: ShoppingCart },
     { id: 'reviews', label: 'Reviews', icon: Star },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings }
@@ -249,6 +317,13 @@ const UserDashboard = () => {
           gradient="bg-gradient-to-br from-blue-500 to-blue-600"
           description="Completed trips"
         />
+        <StatsCard
+  title="Cart Items"
+  value={cartCount}
+  icon={ShoppingCart}
+  gradient="bg-gradient-to-br from-yellow-500 to-orange-600"
+  description="Ready to checkout"
+/>
         <StatsCard
           title="Wishlist"
           value={stats.wishlistCount}
@@ -437,6 +512,53 @@ const UserDashboard = () => {
       )}
     </div>
   );
+  const renderCart = () => (
+  <div className="space-y-6">
+    {/* Header */}
+    <div className="flex items-center justify-between mb-6">
+      <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <ShoppingCart className="w-6 h-6 text-teal-600" />
+        My Cart ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})
+      </h3>
+      {cartItems.length > 0 && (
+        <button
+          onClick={handleClearCart}
+          className="px-4 py-2 text-red-600 hover:text-red-700 font-semibold text-sm border border-red-300 rounded-lg hover:bg-red-50 transition-all"
+        >
+          Clear All
+        </button>
+      )}
+    </div>
+
+    {/* Cart Items */}
+    {cartItems.length === 0 ? (
+      <div className="text-center py-12 bg-white rounded-2xl shadow-lg">
+        <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+          <ShoppingCart className="w-10 h-10 text-gray-400" />
+        </div>
+        <h4 className="text-lg font-semibold text-gray-700 mb-2">Your cart is empty</h4>
+        <p className="text-gray-500 mb-4">Start adding destinations to your cart!</p>
+        <button
+          onClick={() => navigate('/destinations')}
+          className="px-6 py-3 bg-gradient-to-r from-teal-500 to-blue-500 text-white rounded-xl hover:from-teal-600 hover:to-blue-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+        >
+          Explore Destinations
+        </button>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {cartItems.map((item) => (
+          <CartCard
+            key={item.cart_id}
+            item={item}
+            onRemove={handleRemoveFromCart}
+            onBookNow={handleBookNow}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+);
 
   const renderReviews = () => (
     <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -775,7 +897,7 @@ const UserDashboard = () => {
           )}
         </div>
       )}
-
+      {activeTab === 'cart' && renderCart()}
       {activeTab === 'reviews' && (
         <div className="content-card">
           <h3 className="content-card-title">
@@ -876,6 +998,7 @@ const UserDashboard = () => {
       onDelete={handleDeleteNotification}
       onNotificationClick={handleNotificationClick}
     />
+    
   </div>
 );
 };

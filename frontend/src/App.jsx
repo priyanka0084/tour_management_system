@@ -13,7 +13,10 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CartProvider } from './context/CartContext'; // ✨ NEW IMPORT
 import FloatingChatbot from './components/home/FloatingChatbot';
+import { ToastContainer } from 'react-toastify'; // ✨ NEW IMPORT
+import 'react-toastify/dist/ReactToastify.css'; // ✨ NEW IMPORT
 import './App.css';
 
 // Protected Route Component
@@ -93,10 +96,13 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="App">
-          <AppRoutes />
-          <FloatingChatbot />
-        </div>
+        <CartProvider> {/* ✨ NEW: CartProvider wraps everything */}
+          <div className="App">
+            <AppRoutes />
+            <FloatingChatbot />
+            <ToastContainer /> {/* ✨ NEW: Toast notifications container */}
+          </div>
+        </CartProvider>
       </AuthProvider>
     </Router>
   );

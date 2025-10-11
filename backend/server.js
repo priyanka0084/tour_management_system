@@ -6,7 +6,7 @@ import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-
+import cartRoutes from './routes/cart.js';
 // Load environment variables
 dotenv.config();
 
@@ -99,7 +99,7 @@ import adminBookingsRoutes from './routes/admin/bookings.js';
 import adminUsersRoutes from './routes/admin/users.js';
 import userDashboardRoutes from './routes/userDashboard.js';
 import whatsappRoutes from './routes/whatsapp.js';
-
+import wishlistRoutes from './routes/wishlist.js';
 // Register ALL routes ONCE (order matters!)
 app.use('/api/auth', authRoutes);
 app.use('/api/bookingpayment', bookingLimiter, bookingRoutes);
@@ -117,7 +117,10 @@ app.use('/api/user', userDashboardRoutes);
 
 // WhatsApp routes (NEW)
 app.use('/api/whatsapp', whatsappRoutes);
-
+app.use('/api/user', userDashboardRoutes);
+// Cart routes (NEW) - Add this line
+app.use('/api/cart', cartRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

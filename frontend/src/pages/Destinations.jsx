@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import config from '../config';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import '../styles/destinations.css';
+
 
 const Destinations = () => {
   const navigate = useNavigate();
+  const { addToCart, isInCart } = useCart();
+const { isAuthenticated } = useAuth();
   const [countries, setCountries] = useState([]);
   const [places, setPlaces] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -105,9 +110,29 @@ const Destinations = () => {
     navigate(`/packages/${placeId}`);
   };
 
-  const handleAddToCart = (place) => {
-    alert(`${place.name} added to cart!`);
-  };
+  const handleAddToCart = async (place) => {
+  console.log('🎯 Adding place to cart:', place); // ADD THIS
+  
+  if (!isAuthenticated) {
+    toast.error('Please login to add items to cart');
+    setTimeout(() => navigate('/login'), 1000);
+    return;
+  }
+
+  if (isInCart(place.id)) {
+    toast.warning('This place is already in your cart!');
+    return;
+  }
+
+  console.log('📤 Calling addToCart...'); // ADD THIS
+  const result = await addToCart(place);
+  console.log('📥 Add to cart result:', result); // ADD THIS
+  
+  if (result.success) {
+    console.log('✅ Successfully added to cart!');
+  }
+};
+
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-IN', {
