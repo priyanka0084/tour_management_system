@@ -5,6 +5,7 @@ import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js';
 import { authMiddleware } from '../middleware/auth.js';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import jwt from 'jsonwebtoken';
 const router = express.Router();
 
 // Helper: Generate session token
@@ -341,7 +342,76 @@ if (!emailResult.success && !emailResult.devMode) {
     res.status(500).json({ error: "Server error. Please try again later." });
   }
 });
+// ==================== REFRESH TOKEN ====================
+router.post("/refresh-token", async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
 
+    if (!refreshToken) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Refresh token required" 
+      });
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key');
+
+    if (!decoded) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Invalid refresh token" 
+      });
+    }
+
+    // Get user from database
+    const [users] = await pool.query(
+      "SELECT id, name, email, role, profile_picture, is_verified FROM users WHERE id = ?",
+      [decoded.id]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    const user = users[0];
+
+    // Generate new access token
+    const newAccessToken = generateAccessToken(user);
+
+    res.json({
+      success: true,
+      accessToken: newAccessToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profilePicture: user.profile_picture,
+        isVerified: user.is_verified
+      }
+    });
+
+  } catch (err) {
+    console.error("Refresh token error:", err);
+    
+    // If token is expired or invalid, send specific error
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Refresh token expired" 
+      });
+    }
+
+    res.status(401).json({ 
+      success: false, 
+      error: "Invalid refresh token" 
+    });
+  }
+});
 // ==================== RESET PASSWORD ====================
 router.post("/reset-password", async (req, res) => {
   const { token, newPassword } = req.body;
