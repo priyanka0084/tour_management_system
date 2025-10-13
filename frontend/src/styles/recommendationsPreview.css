@@ -1,0 +1,449 @@
+/* ========================================
+   RECOMMENDATIONS PREVIEW - HOME PAGE
+   Modern, Trendy, Professional Design
+======================================== */
+
+/* Section Container */
+.recommendations-preview-section {
+  padding: 80px 0;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f8f9ff 50%,
+    #ffffff 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+.recommendations-preview-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(102, 126, 234, 0.05) 0%,
+    transparent 70%
+  );
+  animation: backgroundMove 20s ease-in-out infinite;
+}
+
+@keyframes backgroundMove {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(10%);
+  }
+}
+
+.recommendations-preview-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ==================== HEADER ==================== */
+.preview-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.preview-header-content {
+  margin-bottom: 30px;
+}
+
+.preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  }
+}
+
+.preview-badge svg {
+  animation: sparkleRotate 3s linear infinite;
+}
+
+@keyframes sparkleRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.preview-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #333;
+  margin: 0 0 15px 0;
+  line-height: 1.2;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.preview-subtitle {
+  font-size: 1.1rem;
+  color: #666;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+/* View All Button */
+.view-recommendations-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.view-recommendations-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.view-recommendations-btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.view-recommendations-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.view-recommendations-btn:active {
+  transform: translateY(-1px);
+}
+
+.view-recommendations-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.view-recommendations-btn:hover svg {
+  transform: translateX(5px);
+}
+
+/* ==================== RECOMMENDATIONS GRID ==================== */
+.recommendations-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
+  margin-bottom: 50px;
+}
+
+.preview-card-wrapper {
+  animation: fadeInUp 0.6s ease-out backwards;
+}
+
+/* ==================== LOADING STATE ==================== */
+.preview-loading {
+  margin-bottom: 50px;
+}
+
+.preview-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
+}
+
+.skeleton-card {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.skeleton-image {
+  width: 100%;
+  height: 250px;
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-content {
+  padding: 20px;
+}
+
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ==================== BOTTOM CTA ==================== */
+.preview-bottom-cta {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 25px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-bottom-cta::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+  animation: ctaGlow 4s ease-in-out infinite;
+}
+
+@keyframes ctaGlow {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(10%, 10%);
+  }
+}
+
+.cta-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.cta-icon {
+  color: #ffc107;
+  animation: iconBounce 2s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.cta-content p {
+  font-size: 1.2rem;
+  color: white;
+  margin: 0;
+  font-weight: 600;
+  max-width: 700px;
+}
+
+.cta-explore-btn {
+  padding: 14px 40px;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.cta-explore-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  background: #f8f9ff;
+}
+
+.cta-explore-btn:active {
+  transform: translateY(-1px);
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 992px) {
+  .recommendations-preview-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+  }
+
+  .preview-title {
+    font-size: 2.2rem;
+  }
+
+  .preview-subtitle {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .recommendations-preview-section {
+    padding: 60px 0;
+  }
+
+  .preview-header {
+    margin-bottom: 35px;
+  }
+
+  .preview-title {
+    font-size: 1.9rem;
+  }
+
+  .preview-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .view-recommendations-btn {
+    padding: 12px 28px;
+    font-size: 0.95rem;
+  }
+
+  .recommendations-preview-grid,
+  .preview-skeleton-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .preview-bottom-cta {
+    padding: 30px 20px;
+  }
+
+  .cta-content {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cta-content p {
+    font-size: 1.05rem;
+  }
+
+  .cta-explore-btn {
+    padding: 12px 32px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .recommendations-preview-section {
+    padding: 40px 0;
+  }
+
+  .preview-badge {
+    font-size: 0.85rem;
+    padding: 6px 16px;
+  }
+
+  .preview-badge svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .preview-title {
+    font-size: 1.6rem;
+  }
+
+  .preview-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .view-recommendations-btn {
+    padding: 10px 24px;
+    font-size: 0.9rem;
+  }
+
+  .cta-content p {
+    font-size: 0.95rem;
+  }
+
+  .cta-explore-btn {
+    width: 100%;
+    padding: 12px 20px;
+  }
+}

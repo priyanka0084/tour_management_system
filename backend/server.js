@@ -99,13 +99,14 @@ import adminBookingsRoutes from './routes/admin/bookings.js';
 import adminUsersRoutes from './routes/admin/users.js';
 import userDashboardRoutes from './routes/userDashboard.js';
 import whatsappRoutes from './routes/whatsapp.js';
+import recommendationsRoutes from './routes/recommendations.js';
 import wishlistRoutes from './routes/wishlist.js';
 // Register ALL routes ONCE (order matters!)
 app.use('/api/auth', authRoutes);
 app.use('/api/bookingpayment', bookingLimiter, bookingRoutes);
 app.use('/api/destinations', destinationsRoutes);
 app.use('/api/packages', packagesRoutes);
-
+app.use('/api/recommendations', recommendationsRoutes);
 // Admin routes
 app.use('/api/admin/destinations', adminDestinationsRoutes);
 app.use('/api/admin/packages', adminPackagesRoutes);

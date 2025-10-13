@@ -19,7 +19,8 @@ import { WishlistProvider } from './context/WishlistContext';
 import { ToastContainer } from 'react-toastify'; // ✨ NEW IMPORT
 import 'react-toastify/dist/ReactToastify.css'; // ✨ NEW IMPORT
 import './App.css';
-
+import { RecommendationProvider } from './context/RecommendationContext';
+import RecommendationsPage from './pages/RecommendationsPage';
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
@@ -76,7 +77,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
+      <Route path="/recommendations" element={<RecommendationsPage />} />
       {/* Protected Admin Route */}
       <Route
         path="/admindashboard"
@@ -99,11 +100,13 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider> {/* ✨ NEW: WishlistProvider wraps everything */}
+            <RecommendationProvider>
             <div className="App">
               <AppRoutes />
               <FloatingChatbot />
               <ToastContainer />
             </div>
+            </RecommendationProvider>
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>

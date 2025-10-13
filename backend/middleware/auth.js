@@ -22,7 +22,7 @@ export const authMiddleware = (req, res, next) => {
         if (!decoded) {
             return res.status(401).json({ 
                 success: false, 
-                error: 'Invalid or expired token' 
+                error: 'Invalid token' 
             });
         }
 
@@ -31,6 +31,23 @@ export const authMiddleware = (req, res, next) => {
         next();
     } catch (error) {
         console.error('Auth middleware error:', error);
+        
+        // Send specific error message for token expiration
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ 
+                success: false, 
+                error: 'Token expired',
+                expiredAt: error.expiredAt
+            });
+        }
+        
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ 
+                success: false, 
+                error: 'Invalid token' 
+            });
+        }
+        
         return res.status(401).json({ 
             success: false, 
             error: 'Authentication failed' 

@@ -6,7 +6,8 @@ import WhyChooseUs from "../components/home/WhyChooseUs";
 import Testimonials from "../components/home/Testimonials";
 import MapSection from "../components/home/MapSection";
 import "../styles/home.css";
-
+import RecommendationsPreview from '../components/home/RecommendationsPreview';
+import '../styles/recommendationsPreview.css';
 const HomePage = () => {
   const footerRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -220,7 +221,7 @@ const HomePage = () => {
       <section id="destinations">
         <FeaturedDestinations />
       </section>
-
+      <RecommendationsPreview />
       {/* Why Choose Us */}
       <WhyChooseUs />
 

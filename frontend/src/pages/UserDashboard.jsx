@@ -20,6 +20,7 @@ import NotificationPanel from '../components/dashboard/NotificationPanel';
 import ProfileEditor from '../components/dashboard/ProfileEditor';
 import { useWishlist } from '../context/WishlistContext';
 // Import styles
+import RecommendationsWidget from '../components/dashboard/RecommendationsWidget';
 import '../styles/UserDashboard.css';
 
 const UserDashboard = () => {
@@ -771,7 +772,7 @@ const handleBookNow = (item) => {
               description="Shared experiences"
             />
           </div>
-
+         <RecommendationsWidget />
           {/* Recent Bookings */}
           <div className="content-card">
             <div className="content-card-header">

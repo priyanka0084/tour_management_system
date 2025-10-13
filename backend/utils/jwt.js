@@ -5,6 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-i
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
 
 // Generate Access Token (15 minutes expiry)
+// Generate Access Token (1 hour for development, 15 mins for production)
 export const generateAccessToken = (user) => {
   return jwt.sign(
     {
@@ -14,7 +15,7 @@ export const generateAccessToken = (user) => {
       name: user.name
     },
     JWT_SECRET,
-    { expiresIn: '15m' } // 15 minutes
+    { expiresIn: process.env.NODE_ENV === 'production' ? '15m' : '1h' } // 1 hour in dev, 15 mins in prod
   );
 };
 
