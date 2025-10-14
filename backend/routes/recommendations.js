@@ -4,15 +4,20 @@ import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Helper function to safely parse integer with default
+const safeParseInt = (value, defaultValue) => {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) || parsed <= 0 ? defaultValue : parsed;
+};
+
 // ==========================================
 // GET /api/recommendations/offers - Get Active Offers
 // ==========================================
 router.get('/offers', async (req, res) => {
     try {
-        const { limit = 6 } = req.query;
+        const limit = safeParseInt(req.query.limit, 6);
 
-        // Query to fetch offers with calculated discount and place details
-        // Uses places table price_per_person as the base price
+        // Simple query without complex calculations - get all data first
         const query = `
             SELECT 
                 p.id as place_id,
@@ -22,55 +27,47 @@ router.get('/offers', async (req, res) => {
                 p.rating,
                 p.duration_days,
                 p.price_per_person,
-                c.name as country_name,
-                
-                -- Calculate random discount (10% to 30%)
-                p.price_per_person as new_price,
-                ROUND(p.price_per_person / (1 - (FLOOR(10 + (RAND() * 20)) / 100)), 2) as old_price,
-                FLOOR(10 + (RAND() * 20)) as discount_percent,
-                
-                -- Generate random offer details
-                FLOOR(5 + (RAND() * 15)) as spots_left,
-                DATE_ADD(NOW(), INTERVAL FLOOR(3 + (RAND() * 27)) DAY) as valid_until,
-                DATEDIFF(DATE_ADD(NOW(), INTERVAL FLOOR(3 + (RAND() * 27)) DAY), NOW()) as days_remaining,
-                
-                CONCAT('Special ', FLOOR(10 + (RAND() * 20)), '% OFF on ', p.name) as title
+                c.name as country_name
             FROM places p
             JOIN countries c ON p.country_id = c.id
             WHERE p.price_per_person IS NOT NULL
             ORDER BY RAND()
-            LIMIT ?
         `;
 
-        const [offers] = await pool.execute(query, [parseInt(limit)]);
-
-        // Format offers to ensure proper data types
-        const formattedOffers = offers.map(offer => ({
-            id: offer.place_id,
-            place_id: offer.place_id,
-            place_name: offer.place_name,
-            title: offer.title,
-            description: offer.description || `Exclusive discount on ${offer.place_name}! Limited time offer.`,
-            image_url: offer.image_url,
-            country_name: offer.country_name,
-            rating: parseFloat(offer.rating) || 4.5,
-            duration_days: parseInt(offer.duration_days) || 3,
+        // Execute query without LIMIT parameter
+        const [allPlaces] = await pool.query(query);
+        
+        // Apply limit in JavaScript and calculate discounts
+        const offers = allPlaces.slice(0, limit).map(place => {
+            const discountPercent = Math.floor(10 + Math.random() * 20); // 10-30%
+            const newPrice = parseFloat(place.price_per_person);
+            const oldPrice = Math.round(newPrice / (1 - discountPercent / 100) * 100) / 100;
+            const spotsLeft = Math.floor(5 + Math.random() * 15);
+            const daysToExpire = Math.floor(3 + Math.random() * 27);
             
-            // Pricing
-            old_price: parseFloat(offer.old_price),
-            new_price: parseFloat(offer.new_price),
-            discount_percent: parseInt(offer.discount_percent),
-            
-            // Availability
-            spots_left: parseInt(offer.spots_left),
-            valid_until: offer.valid_until,
-            days_remaining: parseInt(offer.days_remaining)
-        }));
+            return {
+                id: place.place_id,
+                place_id: place.place_id,
+                place_name: place.place_name,
+                title: `Special ${discountPercent}% OFF on ${place.place_name}`,
+                description: place.description || `Exclusive discount on ${place.place_name}! Limited time offer.`,
+                image_url: place.image_url,
+                country_name: place.country_name,
+                rating: parseFloat(place.rating) || 4.5,
+                duration_days: parseInt(place.duration_days) || 3,
+                old_price: oldPrice,
+                new_price: newPrice,
+                discount_percent: discountPercent,
+                spots_left: spotsLeft,
+                valid_until: new Date(Date.now() + daysToExpire * 24 * 60 * 60 * 1000).toISOString(),
+                days_remaining: daysToExpire
+            };
+        });
 
         res.json({
             success: true,
-            data: formattedOffers,
-            count: formattedOffers.length
+            data: offers,
+            count: offers.length
         });
 
     } catch (error) {
@@ -88,7 +85,7 @@ router.get('/offers', async (req, res) => {
 // ==========================================
 router.get('/trending', async (req, res) => {
     try {
-        const { limit = 10 } = req.query;
+        const limit = safeParseInt(req.query.limit, 10);
 
         const query = `
             SELECT 
@@ -107,10 +104,13 @@ router.get('/trending', async (req, res) => {
             JOIN countries c ON p.country_id = c.id
             LEFT JOIN place_stats ps ON p.id = ps.place_id
             ORDER BY ps.trending_score DESC, p.rating DESC
-            LIMIT ?
         `;
 
-        const [places] = await pool.execute(query, [parseInt(limit)]);
+        // Execute without LIMIT parameter
+        const [allPlaces] = await pool.query(query);
+        
+        // Apply limit in JavaScript
+        const places = allPlaces.slice(0, limit);
 
         res.json({
             success: true,
@@ -122,7 +122,8 @@ router.get('/trending', async (req, res) => {
         console.error('Get trending places error:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Failed to fetch trending places' 
+            error: 'Failed to fetch trending places',
+            message: error.message 
         });
     }
 });
@@ -132,7 +133,8 @@ router.get('/trending', async (req, res) => {
 // ==========================================
 router.get('/', async (req, res) => {
     try {
-        const { tags, limit = 12, userId } = req.query;
+        const { tags, userId } = req.query;
+        const limit = safeParseInt(req.query.limit, 12);
 
         if (!tags) {
             // If no tags provided, return trending
@@ -152,10 +154,10 @@ router.get('/', async (req, res) => {
                 JOIN countries c ON p.country_id = c.id
                 LEFT JOIN place_stats ps ON p.id = ps.place_id
                 ORDER BY p.rating DESC
-                LIMIT ?
             `;
 
-            const [places] = await pool.execute(query, [parseInt(limit)]);
+            const [allPlaces] = await pool.query(query);
+            const places = allPlaces.slice(0, limit);
 
             return res.json({
                 success: true,
@@ -165,8 +167,41 @@ router.get('/', async (req, res) => {
         }
 
         // Get recommendations based on tags
-        const tagArray = tags.split(',').map(t => t.trim());
+        const tagArray = tags.split(',').map(t => t.trim()).filter(t => t.length > 0);
 
+        if (tagArray.length === 0) {
+            // If no valid tags after filtering, return trending
+            const query = `
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.image_url,
+                    p.description,
+                    p.rating,
+                    p.price_per_person,
+                    p.duration_days,
+                    c.name as country_name,
+                    COALESCE(ps.total_views, 0) as total_views,
+                    COALESCE(ps.total_likes, 0) as total_likes
+                FROM places p
+                JOIN countries c ON p.country_id = c.id
+                LEFT JOIN place_stats ps ON p.id = ps.place_id
+                ORDER BY p.rating DESC
+            `;
+
+            const [allPlaces] = await pool.query(query);
+            const places = allPlaces.slice(0, limit);
+
+            return res.json({
+                success: true,
+                data: places,
+                count: places.length
+            });
+        }
+
+        // Build query with proper number of placeholders
+        const placeholders = tagArray.map(() => '?').join(',');
+        
         const query = `
             SELECT DISTINCT
                 p.id,
@@ -185,13 +220,13 @@ router.get('/', async (req, res) => {
             LEFT JOIN place_stats ps ON p.id = ps.place_id
             LEFT JOIN place_tags pt ON p.id = pt.place_id
             LEFT JOIN tags t ON pt.tag_id = t.id
-            WHERE t.name IN (${tagArray.map(() => '?').join(',')})
+            WHERE t.name IN (${placeholders})
             GROUP BY p.id
             ORDER BY tag_match_count DESC, p.rating DESC
-            LIMIT ?
         `;
 
-        const [places] = await pool.execute(query, [...tagArray, parseInt(limit)]);
+        const [allPlaces] = await pool.execute(query, tagArray);
+        const places = allPlaces.slice(0, limit);
 
         res.json({
             success: true,
@@ -204,7 +239,8 @@ router.get('/', async (req, res) => {
         console.error('Get recommendations error:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Failed to fetch recommendations' 
+            error: 'Failed to fetch recommendations',
+            message: error.message 
         });
     }
 });
@@ -215,6 +251,14 @@ router.get('/', async (req, res) => {
 router.get('/preferences/:userId', authMiddleware, async (req, res) => {
     try {
         const { userId } = req.params;
+
+        // Verify user is accessing their own preferences
+        if (req.user.id !== parseInt(userId)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied'
+            });
+        }
 
         const query = `
             SELECT 
@@ -297,6 +341,60 @@ router.post('/preferences', authMiddleware, async (req, res) => {
         res.status(500).json({ 
             success: false, 
             error: 'Failed to save preferences' 
+        });
+    }
+});
+
+// ==========================================
+// GET /api/recommendations/tags - Get All Available Tags
+// ==========================================
+router.get('/tags', async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                id, 
+                name, 
+                display_name,
+                tag_type,
+                icon,
+                description
+            FROM tags 
+            ORDER BY tag_type, name ASC
+        `;
+        const [tags] = await pool.query(query);
+
+        // Group tags by tag_type for the personality quiz
+        const grouped = {
+            personality: [],
+            activity: [],
+            vibe: [],
+            location: []
+        };
+
+        // Group tags by their tag_type from database
+        tags.forEach(tag => {
+            const tagType = tag.tag_type || 'personality';
+            if (grouped[tagType]) {
+                grouped[tagType].push(tag);
+            } else {
+                // Default to personality if tag_type doesn't match
+                grouped.personality.push(tag);
+            }
+        });
+
+        res.json({
+            success: true,
+            data: tags,
+            grouped: grouped,
+            count: tags.length
+        });
+
+    } catch (error) {
+        console.error('Get tags error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch tags',
+            message: error.message 
         });
     }
 });
