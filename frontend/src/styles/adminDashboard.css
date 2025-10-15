@@ -593,3 +593,606 @@
     grid-template-columns: 1fr;
   }
 }
+/* ==================== FILTER & SORT STYLES ==================== */
+
+.filter-toggle-btn {
+  display: none; /* Hidden on desktop, visible on mobile */
+  margin-bottom: 15px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.filter-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.clear-filters-btn {
+  margin-bottom: 15px;
+  padding: 8px 16px;
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.clear-filters-btn:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  transform: translateY(-2px);
+}
+
+.data-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  vertical-align: top;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  justify-content: space-between;
+}
+
+.sort-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.sort-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.sort-icon-default {
+  opacity: 0.5;
+}
+
+.filter-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: #999;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.filter-input,
+.filter-select {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.filter-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.filter-select {
+  padding: 8px 12px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 35px;
+}
+
+.filter-select option {
+  background: #333;
+  color: white;
+  padding: 10px;
+}
+
+/* ==================== GLASSMORPHISM ICON BUTTONS ==================== */
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn {
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Shining glass effect */
+.icon-btn::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: rotate(45deg);
+  transition: all 0.6s ease;
+  opacity: 0;
+}
+
+.icon-btn:hover::before {
+  opacity: 1;
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+/* Edit Button - Blue Glassmorphism */
+.edit-icon-btn {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.edit-icon-btn:hover {
+  background: rgba(52, 152, 219, 0.35);
+  color: #fff;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.5);
+  border-color: rgba(52, 152, 219, 0.5);
+}
+
+/* Delete Button - Red Glassmorphism */
+.delete-icon-btn {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.delete-icon-btn:hover {
+  background: rgba(231, 76, 60, 0.35);
+  color: #fff;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(231, 76, 60, 0.5);
+  border-color: rgba(231, 76, 60, 0.5);
+}
+
+/* Glow effect on hover */
+.icon-btn:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* Remove old button styles */
+.edit-btn,
+.delete-btn {
+  display: none; /* Hide old text buttons */
+}
+
+/* ==================== RESPONSIVE - MOBILE ==================== */
+
+@media (max-width: 768px) {
+  .filter-toggle-btn {
+    display: flex;
+  }
+
+  .data-table table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .filter-input-wrapper {
+    min-width: 120px;
+  }
+
+  .th-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .sort-btn {
+    align-self: flex-start;
+  }
+
+  /* Hide filters by default on mobile */
+  .filter-input-wrapper {
+    display: none;
+  }
+
+  /* Show filters when toggle is active */
+  .data-table.filters-visible .filter-input-wrapper {
+    display: flex;
+  }
+
+  .icon-btn {
+    padding: 8px;
+  }
+
+  .action-buttons {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .data-table th {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .data-table td {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  .filter-input,
+  .filter-select {
+    font-size: 12px;
+    padding: 6px 10px 6px 28px;
+  }
+
+  .icon-btn {
+    padding: 7px;
+  }
+}
+/* ==================== FILTER & SORT STYLES ==================== */
+
+.filter-toggle-btn {
+  margin-bottom: 15px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: none; /* Hidden on desktop */
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.filter-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.clear-filters-btn {
+  margin-bottom: 15px;
+  padding: 8px 16px;
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.clear-filters-btn:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  transform: translateY(-2px);
+}
+
+.data-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  vertical-align: top;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  justify-content: space-between;
+}
+
+.sort-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.sort-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.sort-icon-default {
+  opacity: 0.5;
+}
+
+.filter-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: #999;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.filter-input,
+.filter-select {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.filter-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.filter-select {
+  padding: 8px 12px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 35px;
+}
+
+.filter-select option {
+  background: #333;
+  color: white;
+  padding: 10px;
+}
+
+/* ==================== GLASSMORPHISM ICON BUTTONS ==================== */
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn {
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Shining glass effect */
+.icon-btn::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: rotate(45deg);
+  transition: all 0.6s ease;
+  opacity: 0;
+}
+
+.icon-btn:hover::before {
+  opacity: 1;
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+/* Edit Button - Blue Glassmorphism */
+.edit-icon-btn {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.edit-icon-btn:hover {
+  background: rgba(52, 152, 219, 0.35);
+  color: #fff;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.5);
+  border-color: rgba(52, 152, 219, 0.5);
+}
+
+/* Delete Button - Red Glassmorphism */
+.delete-icon-btn {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.delete-icon-btn:hover {
+  background: rgba(231, 76, 60, 0.35);
+  color: #fff;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(231, 76, 60, 0.5);
+  border-color: rgba(231, 76, 60, 0.5);
+}
+
+/* Glow effect on hover */
+.icon-btn:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* ==================== RESPONSIVE - MOBILE ==================== */
+
+@media (max-width: 768px) {
+  .filter-toggle-btn {
+    display: flex;
+  }
+
+  .data-table table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .filter-input-wrapper {
+    min-width: 120px;
+  }
+
+  .th-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .sort-btn {
+    align-self: flex-start;
+  }
+
+  .icon-btn {
+    padding: 8px;
+  }
+
+  .action-buttons {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .data-table th {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .data-table td {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  .filter-input,
+  .filter-select {
+    font-size: 12px;
+    padding: 6px 10px 6px 28px;
+  }
+
+  .icon-btn {
+    padding: 7px;
+  }
+}

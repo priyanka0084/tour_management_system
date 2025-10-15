@@ -1,0 +1,347 @@
+/* ========================================
+   CART & WISHLIST ICONS - COMPLETE FIX
+   For Offers and Recommendations Cards
+======================================== */
+
+/* ==================== CARD ACTION BUTTONS (SHARED) ==================== */
+
+.card-action-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 10; /* CRITICAL: Ensure buttons are above everything */
+}
+
+.card-action-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.card-action-btn:active {
+  transform: scale(0.95);
+}
+
+.card-action-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: all 0.3s ease;
+}
+
+/* Wishlist Button Styles */
+.card-action-btn:first-child {
+  color: #ec4899;
+}
+
+.card-action-btn:first-child:hover {
+  background: #ec4899;
+  color: white;
+}
+
+.card-action-btn.liked {
+  background: #ec4899;
+  color: white;
+}
+
+.card-action-btn.liked svg {
+  fill: currentColor;
+}
+
+/* Cart Button Styles */
+.card-action-btn:last-child {
+  color: #10b981;
+}
+
+.card-action-btn:last-child:hover {
+  background: #10b981;
+  color: white;
+}
+
+.card-action-btn.in-cart {
+  background: #10b981;
+  color: white;
+}
+
+.card-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Animation for adding to wishlist/cart */
+.card-action-btn.animating {
+  animation: buttonPulse 0.6s ease;
+}
+
+@keyframes buttonPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(0.9);
+  }
+  75% {
+    transform: scale(1.15);
+  }
+}
+
+/* Heart fill animation */
+.card-action-btn svg.filled {
+  fill: currentColor;
+  animation: heartBeat 0.6s ease;
+}
+
+@keyframes heartBeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.3);
+  }
+  50% {
+    transform: scale(0.9);
+  }
+  75% {
+    transform: scale(1.2);
+  }
+}
+
+/* ==================== OFFER CARD SPECIFIC ==================== */
+
+.offer-card-actions {
+  position: absolute;
+  top: 15px;
+  left: 15px; /* CHANGED: Move to left to avoid conflict with discount badge */
+  display: flex;
+  gap: 10px;
+  z-index: 10; /* CRITICAL: Above image and badges */
+  pointer-events: auto; /* Ensure clicks work */
+}
+
+.offer-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  z-index: 5; /* Below action buttons */
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  pointer-events: none; /* Don't block clicks */
+}
+
+.offer-card-image {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+/* Ensure image doesn't block buttons */
+.offer-card-image::after {
+  pointer-events: none;
+}
+
+/* ==================== PLACE CARD (RECOMMENDATIONS) SPECIFIC ==================== */
+
+.place-card-actions {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: flex;
+  gap: 10px;
+  z-index: 10; /* Above everything */
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+}
+
+/* Show buttons on card hover */
+.place-card:hover .place-card-actions,
+.offer-card:hover .offer-card-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Always show if item is in wishlist/cart */
+.place-card-actions:has(.liked),
+.place-card-actions:has(.in-cart) {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.place-card-image {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+}
+
+/* Place card badges positioning */
+.place-card-badges {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  display: flex;
+  gap: 8px;
+  z-index: 3; /* Below action buttons */
+  pointer-events: none;
+}
+
+.place-card-rating {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: #f59e0b;
+  z-index: 3; /* Below action buttons */
+  pointer-events: none;
+}
+
+/* ==================== MOBILE RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+  .card-action-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .card-action-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Always show buttons on mobile */
+  .place-card-actions,
+  .offer-card-actions {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .offer-card-actions,
+  .place-card-actions {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-action-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .card-action-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .offer-card-actions,
+  .place-card-actions {
+    gap: 6px;
+    top: 10px;
+  }
+
+  .offer-card-actions {
+    left: 10px;
+  }
+
+  .place-card-actions {
+    right: 10px;
+  }
+}
+
+/* ==================== ADDITIONAL ENHANCEMENTS ==================== */
+
+/* Tooltip on hover */
+.card-action-btn::before {
+  content: attr(title);
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 100;
+}
+
+.card-action-btn:hover::before {
+  opacity: 1;
+}
+
+/* Success indicator */
+.card-action-btn.success {
+  background: #10b981;
+  color: white;
+  animation: successPulse 0.4s ease;
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Ensure buttons are clickable even when card is being hovered */
+.offer-card,
+.place-card {
+  pointer-events: auto;
+}
+
+.offer-card-image,
+.place-card-image {
+  pointer-events: auto;
+}
+
+.card-action-btn {
+  pointer-events: auto;
+  user-select: none;
+}
+
+/* Fix for overlapping elements */
+.offer-timer {
+  z-index: 4;
+  pointer-events: none;
+}
+
+.expiring-ribbon {
+  z-index: 4;
+  pointer-events: none;
+}

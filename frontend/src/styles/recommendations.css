@@ -316,7 +316,24 @@
   right: 15px;
   display: flex;
   gap: 10px;
-  z-index: 2;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+/* Show on hover */
+.place-card:hover .place-card-actions,
+.offer-card:hover .offer-card-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Always show if in wishlist/cart */
+.place-card-actions:has(.liked),
+.place-card-actions:has(.in-cart) {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .card-action-btn {
@@ -497,7 +514,8 @@
   border-radius: 20px;
   font-weight: 700;
   font-size: 1.1rem;
-  z-index: 2;
+  z-index: 5;
+  pointer-events: none;
   box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
 }
 
@@ -1042,12 +1060,12 @@
 .offer-card-actions {
   position: absolute;
   top: 15px;
-  right: 15px;
+  left: 15px; /* CHANGED: Move to left */
   display: flex;
   gap: 10px;
-  z-index: 2;
+  z-index: 10; /* INCREASED: Above everything */
+  pointer-events: auto;
 }
-
 /* Offer Location */
 .offer-location {
   display: flex;

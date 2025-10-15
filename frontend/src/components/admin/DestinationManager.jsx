@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  FiEdit2, 
+  FiTrash2, 
+  FiSearch, 
+  FiFilter, 
+  FiChevronUp, 
+  FiChevronDown,
+  FiX
+} from 'react-icons/fi';
 import config from '../../config';
 
 const DestinationManager = () => {
@@ -9,7 +18,20 @@ const DestinationManager = () => {
   const [editingCountry, setEditingCountry] = useState(null);
   const [editingPlace, setEditingPlace] = useState(null);
   const [activeView, setActiveView] = useState('places'); // 'countries' or 'places'
-
+  const [showFilters, setShowFilters] = useState(true); // For mobile toggle
+  const [filters, setFilters] = useState({
+    id: '',
+    name: '',
+    country: '',
+    rating: '',
+    price: '',
+    duration: ''
+  });
+  
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: 'asc'
+  });
   const [countryForm, setCountryForm] = useState({
     name: '',
     code: '',
@@ -55,7 +77,112 @@ const DestinationManager = () => {
       console.error('Error fetching places:', error);
     }
   };
+  // NEW: Filter and Sort Logic
+const handleFilterChange = (field, value) => {
+  setFilters(prev => ({
+    ...prev,
+    [field]: value
+  }));
+};
 
+const handleSort = (key) => {
+  let direction = 'asc';
+  if (sortConfig.key === key && sortConfig.direction === 'asc') {
+    direction = 'desc';
+  }
+  setSortConfig({ key, direction });
+};
+
+const clearFilters = () => {
+  setFilters({
+    id: '',
+    name: '',
+    country: '',
+    rating: '',
+    price: '',
+    duration: ''
+  });
+  setSortConfig({ key: null, direction: 'asc' });
+};
+
+// Filter and Sort Places
+const getFilteredAndSortedPlaces = () => {
+  let filtered = [...places];
+
+  // Apply filters
+  if (filters.id) {
+    filtered = filtered.filter(place => 
+      place.id.toString().includes(filters.id)
+    );
+  }
+  if (filters.name) {
+    filtered = filtered.filter(place =>
+      place.name.toLowerCase().includes(filters.name.toLowerCase())
+    );
+  }
+  if (filters.country) {
+    filtered = filtered.filter(place =>
+      place.country_name.toLowerCase().includes(filters.country.toLowerCase())
+    );
+  }
+  if (filters.rating) {
+    filtered = filtered.filter(place =>
+      place.rating >= parseFloat(filters.rating)
+    );
+  }
+  if (filters.price) {
+    filtered = filtered.filter(place =>
+      place.price_per_person <= parseFloat(filters.price)
+    );
+  }
+  if (filters.duration) {
+    filtered = filtered.filter(place =>
+      place.duration_days <= parseInt(filters.duration)
+    );
+  }
+
+  // Apply sorting
+  if (sortConfig.key) {
+    filtered.sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+
+      // Handle country name sorting
+      if (sortConfig.key === 'country') {
+        aVal = a.country_name;
+        bVal = b.country_name;
+      }
+
+      // Handle price sorting
+      if (sortConfig.key === 'price') {
+        aVal = a.price_per_person;
+        bVal = b.price_per_person;
+      }
+
+      // Handle duration sorting
+      if (sortConfig.key === 'duration') {
+        aVal = a.duration_days;
+        bVal = b.duration_days;
+      }
+
+      if (aVal < bVal) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aVal > bVal) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+
+  return filtered;
+};
+
+// Get unique countries for filter dropdown
+const getUniqueCountries = () => {
+  const uniqueCountries = [...new Set(places.map(place => place.country_name))];
+  return uniqueCountries.filter(Boolean).sort();
+};
   // Country CRUD Operations
   const handleCountrySubmit = async (e) => {
     e.preventDefault();
@@ -338,55 +465,264 @@ const DestinationManager = () => {
           )}
 
           {/* Places Table */}
-          <div className="data-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Image</th>
-                  <th>Name</th>
-                  <th>Country</th>
-                  <th>Rating</th>
-                  <th>Price</th>
-                  <th>Duration</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {places.map(place => (
-                  <tr key={place.id}>
-                    <td>{place.id}</td>
-                    <td>
-                      <img 
-                        src={place.image_url || 'https://via.placeholder.com/50'} 
-                        alt={place.name}
-                        className="table-img"
-                      />
-                    </td>
-                    <td>{place.name}</td>
-                    <td>{place.country_name}</td>
-                    <td>{place.rating}</td>
-                    <td>₹{place.price_per_person}</td>
-                    <td>{place.duration_days} days</td>
-                    <td className="action-buttons">
-                      <button 
-                        className="edit-btn"
-                        onClick={() => handleEditPlace(place)}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        className="delete-btn"
-                        onClick={() => handleDeletePlace(place.id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+<div className="data-table">
+  {/* Filter Toggle Button for Mobile */}
+  <button 
+    className="filter-toggle-btn"
+    onClick={() => setShowFilters(!showFilters)}
+  >
+    <FiFilter size={18} />
+    {showFilters ? 'Hide Filters' : 'Show Filters'}
+  </button>
+
+  {/* Clear Filters Button */}
+  {(filters.id || filters.name || filters.country || filters.rating || filters.price || filters.duration || sortConfig.key) && (
+    <button className="clear-filters-btn" onClick={clearFilters}>
+      <FiX size={16} />
+      Clear All Filters
+    </button>
+  )}
+
+  <table>
+    <thead>
+      <tr>
+        {/* ID Column */}
+        <th>
+          <div className="th-content">
+            <span>ID</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('id')}
+            >
+              {sortConfig.key === 'id' ? (
+                sortConfig.direction === 'asc' ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
           </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <FiSearch size={14} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search ID..."
+                value={filters.id}
+                onChange={(e) => handleFilterChange('id', e.target.value)}
+                className="filter-input"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Image Column */}
+        <th>
+          <div className="th-content">
+            <span>Image</span>
+          </div>
+        </th>
+
+        {/* Name Column */}
+        <th>
+          <div className="th-content">
+            <span>Name</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('name')}
+            >
+              {sortConfig.key === 'name' ? (
+                sortConfig.direction === 'asc' ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <FiSearch size={14} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search name..."
+                value={filters.name}
+                onChange={(e) => handleFilterChange('name', e.target.value)}
+                className="filter-input"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Country Column */}
+        <th>
+          <div className="th-content">
+            <span>Country</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('country')}
+            >
+              {sortConfig.key === 'country' ? (
+                sortConfig.direction === 'asc' ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <select
+                value={filters.country}
+                onChange={(e) => handleFilterChange('country', e.target.value)}
+                className="filter-select"
+              >
+                <option value="">All Countries</option>
+                {getUniqueCountries().map(country => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </th>
+
+        {/* Rating Column */}
+        <th>
+          <div className="th-content">
+            <span>Rating</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('rating')}
+            >
+              {sortConfig.key === 'rating' ? (
+                sortConfig.direction === 'asc' ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <input
+                type="number"
+                placeholder="Min rating..."
+                value={filters.rating}
+                onChange={(e) => handleFilterChange('rating', e.target.value)}
+                className="filter-input"
+                min="0"
+                max="5"
+                step="0.1"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Price Column */}
+        <th>
+          <div className="th-content">
+            <span>Price</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('price')}
+            >
+              {sortConfig.key === 'price' ? (
+                sortConfig.direction === 'asc' ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <input
+                type="number"
+                placeholder="Max price..."
+                value={filters.price}
+                onChange={(e) => handleFilterChange('price', e.target.value)}
+                className="filter-input"
+                min="0"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Duration Column */}
+        <th>
+          <div className="th-content">
+            <span>Duration</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('duration')}
+            >
+              {sortConfig.key === 'duration' ? (
+                sortConfig.direction === 'asc' ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <input
+                type="number"
+                placeholder="Max days..."
+                value={filters.duration}
+                onChange={(e) => handleFilterChange('duration', e.target.value)}
+                className="filter-input"
+                min="0"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Actions Column */}
+        <th>
+          <div className="th-content">
+            <span>Actions</span>
+          </div>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {getFilteredAndSortedPlaces().map(place => (
+        <tr key={place.id}>
+          <td>{place.id}</td>
+          <td>
+            <img 
+              src={place.image_url || 'https://via.placeholder.com/50'} 
+              alt={place.name}
+              className="table-img"
+            />
+          </td>
+          <td>{place.name}</td>
+          <td>{place.country_name}</td>
+          <td>{place.rating}</td>
+          <td>₹{place.price_per_person}</td>
+          <td>{place.duration_days} days</td>
+          <td className="action-buttons">
+            <button 
+              className="icon-btn edit-icon-btn"
+              onClick={() => handleEditPlace(place)}
+              title="Edit"
+            >
+              <FiEdit2 size={16} />
+            </button>
+            <button 
+              className="icon-btn delete-icon-btn"
+              onClick={() => handleDeletePlace(place.id)}
+              title="Delete"
+            >
+              <FiTrash2 size={16} />
+            </button>
+          </td>
+        </tr>
+      ))}
+      {getFilteredAndSortedPlaces().length === 0 && (
+        <tr>
+          <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+            No places found matching your filters
+          </td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+</div>
         </div>
       )}
 
