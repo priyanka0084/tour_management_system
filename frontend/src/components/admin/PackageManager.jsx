@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  FiEdit2, 
+  FiTrash2, 
+  FiSearch, 
+  FiFilter, 
+  FiChevronUp, 
+  FiChevronDown,
+  FiX
+} from 'react-icons/fi';
 import config from '../../config';
 
 const PackageManager = () => {
@@ -17,7 +26,21 @@ const PackageManager = () => {
     places_included: '',
     itinerary: ''
   });
+  const [filters, setFilters] = useState({
+    id: '',
+    title: '',
+    place: '',
+    country: '',
+    price: '',      // Max price filter
+    duration: ''    // Max days filter
+  });
 
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: 'asc'
+  });
+
+  const [showFilters, setShowFilters] = useState(true);
   useEffect(() => {
     fetchPackages();
     fetchPlaces();
@@ -130,7 +153,128 @@ const PackageManager = () => {
     setEditingPackage(null);
     setShowPackageForm(false);
   };
+  // ===================================
+// STEP 2: ADD THESE FUNCTIONS AFTER resetPackageForm()
+// Add these before the return statement
+// ===================================
 
+// Handle filter changes
+const handleFilterChange = (field, value) => {
+  setFilters(prev => ({
+    ...prev,
+    [field]: value
+  }));
+};
+
+// Handle sorting
+const handleSort = (key) => {
+  let direction = 'asc';
+  if (sortConfig.key === key && sortConfig.direction === 'asc') {
+    direction = 'desc';
+  }
+  setSortConfig({ key, direction });
+};
+
+// Clear all filters
+const clearFilters = () => {
+  setFilters({
+    id: '',
+    title: '',
+    place: '',
+    country: '',
+    price: '',
+    duration: ''
+  });
+  setSortConfig({ key: null, direction: 'asc' });
+};
+
+// Filter and Sort Packages - Main function
+const getFilteredAndSortedPackages = () => {
+  let filtered = [...packages];
+
+  // Apply filters (Contains logic - partial match)
+  if (filters.id) {
+    filtered = filtered.filter(pkg => 
+      pkg.id.toString().includes(filters.id)
+    );
+  }
+
+  if (filters.title) {
+    filtered = filtered.filter(pkg =>
+      pkg.title.toLowerCase().includes(filters.title.toLowerCase())
+    );
+  }
+
+  if (filters.place) {
+    filtered = filtered.filter(pkg =>
+      pkg.place_name.toLowerCase().includes(filters.place.toLowerCase())
+    );
+  }
+
+  if (filters.country) {
+    filtered = filtered.filter(pkg =>
+      pkg.country_name.toLowerCase().includes(filters.country.toLowerCase())
+    );
+  }
+
+  // Price filter - Max price (show packages up to ₹X)
+  if (filters.price) {
+    filtered = filtered.filter(pkg =>
+      pkg.price <= parseFloat(filters.price)
+    );
+  }
+
+  // Duration filter - Max days (show packages up to X days)
+  if (filters.duration) {
+    filtered = filtered.filter(pkg =>
+      pkg.duration_days <= parseInt(filters.duration)
+    );
+  }
+
+  // Apply sorting
+  if (sortConfig.key) {
+    filtered.sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+
+      // Handle place name sorting
+      if (sortConfig.key === 'place') {
+        aVal = a.place_name;
+        bVal = b.place_name;
+      }
+
+      // Handle country name sorting
+      if (sortConfig.key === 'country') {
+        aVal = a.country_name;
+        bVal = b.country_name;
+      }
+
+      // Handle duration sorting
+      if (sortConfig.key === 'duration') {
+        aVal = a.duration_days;
+        bVal = b.duration_days;
+      }
+
+      // Handle null/undefined values
+      if (!aVal) aVal = '';
+      if (!bVal) bVal = '';
+
+      // Convert to lowercase for string comparison
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aVal > bVal) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+
+  return filtered;
+};
   return (
     <div className="package-manager">
       <div className="section-header">
@@ -252,47 +396,263 @@ const PackageManager = () => {
       )}
 
       {/* Packages Table */}
-      <div className="data-table">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Place</th>
-              <th>Country</th>
-              <th>Price</th>
-              <th>Duration</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {packages.map(pkg => (
-              <tr key={pkg.id}>
-                <td>{pkg.id}</td>
-                <td>{pkg.title}</td>
-                <td>{pkg.place_name}</td>
-                <td>{pkg.country_name}</td>
-                <td>₹{pkg.price}</td>
-                <td>{pkg.duration_days} days</td>
-                <td className="action-buttons">
-                  <button 
-                    className="edit-btn"
-                    onClick={() => handleEditPackage(pkg)}
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    className="delete-btn"
-                    onClick={() => handleDeletePackage(pkg.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* ===================================
+    STEP 3: REPLACE THE ENTIRE SECTION AFTER showPackageForm MODAL
+    Replace from "Packages Table" comment onwards
+    =================================== */}
+
+{/* ✨ ENHANCED Packages Table with Filters & Sorting */}
+<div className="data-table">
+  {/* Filter Toggle Button for Mobile */}
+  <button 
+    className="filter-toggle-btn"
+    onClick={() => setShowFilters(!showFilters)}
+  >
+    <FiFilter size={18} />
+    {showFilters ? 'Hide Filters' : 'Show Filters'}
+  </button>
+
+  {/* Clear Filters Button */}
+  {(filters.id || filters.title || filters.place || filters.country || 
+    filters.price || filters.duration || sortConfig.key) && (
+    <button className="clear-filters-btn" onClick={clearFilters}>
+      <FiX size={16} />
+      Clear All Filters
+    </button>
+  )}
+
+  <table>
+    <thead>
+      <tr>
+        {/* ID Column */}
+        <th>
+          <div className="th-content">
+            <span>ID</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('id')}
+            >
+              {sortConfig.key === 'id' ? (
+                sortConfig.direction === 'asc' ? 
+                  <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <FiSearch size={14} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search ID..."
+                value={filters.id}
+                onChange={(e) => handleFilterChange('id', e.target.value)}
+                className="filter-input"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Title Column */}
+        <th>
+          <div className="th-content">
+            <span>Title</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('title')}
+            >
+              {sortConfig.key === 'title' ? (
+                sortConfig.direction === 'asc' ? 
+                  <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <FiSearch size={14} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search title..."
+                value={filters.title}
+                onChange={(e) => handleFilterChange('title', e.target.value)}
+                className="filter-input"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Place Column */}
+        <th>
+          <div className="th-content">
+            <span>Place</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('place')}
+            >
+              {sortConfig.key === 'place' ? (
+                sortConfig.direction === 'asc' ? 
+                  <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <FiSearch size={14} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search place..."
+                value={filters.place}
+                onChange={(e) => handleFilterChange('place', e.target.value)}
+                className="filter-input"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Country Column */}
+        <th>
+          <div className="th-content">
+            <span>Country</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('country')}
+            >
+              {sortConfig.key === 'country' ? (
+                sortConfig.direction === 'asc' ? 
+                  <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <FiSearch size={14} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search country..."
+                value={filters.country}
+                onChange={(e) => handleFilterChange('country', e.target.value)}
+                className="filter-input"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Price Column */}
+        <th>
+          <div className="th-content">
+            <span>Price</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('price')}
+            >
+              {sortConfig.key === 'price' ? (
+                sortConfig.direction === 'asc' ? 
+                  <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <input
+                type="number"
+                placeholder="Max price..."
+                value={filters.price}
+                onChange={(e) => handleFilterChange('price', e.target.value)}
+                className="filter-input"
+                min="0"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Duration Column */}
+        <th>
+          <div className="th-content">
+            <span>Duration</span>
+            <button 
+              className="sort-btn"
+              onClick={() => handleSort('duration')}
+            >
+              {sortConfig.key === 'duration' ? (
+                sortConfig.direction === 'asc' ? 
+                  <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+              ) : (
+                <FiChevronDown size={16} className="sort-icon-default" />
+              )}
+            </button>
+          </div>
+          {showFilters && (
+            <div className="filter-input-wrapper">
+              <input
+                type="number"
+                placeholder="Max days..."
+                value={filters.duration}
+                onChange={(e) => handleFilterChange('duration', e.target.value)}
+                className="filter-input"
+                min="0"
+              />
+            </div>
+          )}
+        </th>
+
+        {/* Actions Column */}
+        <th>
+          <div className="th-content">
+            <span>Actions</span>
+          </div>
+        </th>
+      </tr>
+    </thead>
+    
+    <tbody>
+      {getFilteredAndSortedPackages().map(pkg => (
+        <tr key={pkg.id}>
+          <td>{pkg.id}</td>
+          <td>{pkg.title}</td>
+          <td>{pkg.place_name}</td>
+          <td>{pkg.country_name}</td>
+          <td>₹{pkg.price.toLocaleString()}</td>
+          <td>{pkg.duration_days} days</td>
+          <td className="action-buttons">
+            {/* ✨ Icon Buttons instead of text buttons */}
+            <button 
+              className="icon-btn edit-icon-btn"
+              onClick={() => handleEditPackage(pkg)}
+              title="Edit Package"
+            >
+              <FiEdit2 size={16} />
+            </button>
+            <button 
+              className="icon-btn delete-icon-btn"
+              onClick={() => handleDeletePackage(pkg.id)}
+              title="Delete Package"
+            >
+              <FiTrash2 size={16} />
+            </button>
+          </td>
+        </tr>
+      ))}
+      
+      {/* Empty State */}
+      {getFilteredAndSortedPackages().length === 0 && (
+        <tr>
+          <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+            No packages found matching your filters
+          </td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+</div>
     </div>
   );
 };

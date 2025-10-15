@@ -32,6 +32,19 @@ const DestinationManager = () => {
     key: null,
     direction: 'asc'
   });
+  const [countryFilters, setCountryFilters] = useState({
+  id: '',
+  name: '',
+  code: '',
+  description: ''
+});
+
+const [countrySortConfig, setCountrySortConfig] = useState({
+  key: null,
+  direction: 'asc'
+});
+
+const [showCountryFilters, setShowCountryFilters] = useState(true);
   const [countryForm, setCountryForm] = useState({
     name: '',
     code: '',
@@ -170,6 +183,94 @@ const getFilteredAndSortedPlaces = () => {
       }
       if (aVal > bVal) {
         return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+
+  return filtered;
+};
+// ===================================
+// STEP 2: ADD THESE FUNCTIONS FOR COUNTRY FILTERING & SORTING
+// Add these functions after your existing Place filter functions
+// ===================================
+
+// Handle country filter changes
+const handleCountryFilterChange = (field, value) => {
+  setCountryFilters(prev => ({
+    ...prev,
+    [field]: value
+  }));
+};
+
+// Handle country sorting
+const handleCountrySort = (key) => {
+  let direction = 'asc';
+  if (countrySortConfig.key === key && countrySortConfig.direction === 'asc') {
+    direction = 'desc';
+  }
+  setCountrySortConfig({ key, direction });
+};
+
+// Clear all country filters
+const clearCountryFilters = () => {
+  setCountryFilters({
+    id: '',
+    name: '',
+    code: '',
+    description: ''
+  });
+  setCountrySortConfig({ key: null, direction: 'asc' });
+};
+
+// Filter and Sort Countries - Main function
+const getFilteredAndSortedCountries = () => {
+  let filtered = [...countries];
+
+  // Apply filters (Contains logic - partial match)
+  if (countryFilters.id) {
+    filtered = filtered.filter(country => 
+      country.id.toString().includes(countryFilters.id)
+    );
+  }
+  
+  if (countryFilters.name) {
+    filtered = filtered.filter(country =>
+      country.name.toLowerCase().includes(countryFilters.name.toLowerCase())
+    );
+  }
+  
+  if (countryFilters.code) {
+    filtered = filtered.filter(country =>
+      country.code.toLowerCase().includes(countryFilters.code.toLowerCase())
+    );
+  }
+  
+  if (countryFilters.description) {
+    filtered = filtered.filter(country =>
+      (country.description || '').toLowerCase().includes(countryFilters.description.toLowerCase())
+    );
+  }
+
+  // Apply sorting
+  if (countrySortConfig.key) {
+    filtered.sort((a, b) => {
+      let aVal = a[countrySortConfig.key];
+      let bVal = b[countrySortConfig.key];
+
+      // Handle null/undefined values
+      if (!aVal) aVal = '';
+      if (!bVal) bVal = '';
+
+      // Convert to lowercase for string comparison
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) {
+        return countrySortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aVal > bVal) {
+        return countrySortConfig.direction === 'asc' ? 1 : -1;
       }
       return 0;
     });
@@ -727,123 +828,282 @@ const getUniqueCountries = () => {
       )}
 
       {/* Countries View */}
-      {activeView === 'countries' && (
-        <div className="countries-section">
-          <div className="section-header">
-            <h2>Manage Countries</h2>
-            <button className="add-btn" onClick={() => setShowCountryForm(true)}>
-              + Add New Country
-            </button>
-          </div>
+      {/* ===================================
+    STEP 3: REPLACE YOUR ENTIRE COUNTRIES VIEW SECTION
+    Replace the section that starts with {activeView === 'countries' && (
+    =================================== */}
 
-          {/* Country Form Modal */}
-          {showCountryForm && (
-            <div className="modal-overlay" onClick={resetCountryForm}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <h3>{editingCountry ? 'Edit Country' : 'Add New Country'}</h3>
-                <form onSubmit={handleCountrySubmit}>
-                  <div className="form-group">
-                    <label>Country Name *</label>
-                    <input
-                      type="text"
-                      value={countryForm.name}
-                      onChange={(e) => setCountryForm({...countryForm, name: e.target.value})}
-                      required
-                    />
-                  </div>
+{/* Countries View */}
+{activeView === 'countries' && (
+  <div className="countries-section">
+    <div className="section-header">
+      <h2>Manage Countries</h2>
+      <button className="add-btn" onClick={() => setShowCountryForm(true)}>
+        + Add New Country
+      </button>
+    </div>
 
-                  <div className="form-group">
-                    <label>Country Code *</label>
-                    <input
-                      type="text"
-                      value={countryForm.code}
-                      onChange={(e) => setCountryForm({...countryForm, code: e.target.value.toUpperCase()})}
-                      placeholder="IN, US, FR, etc."
-                      maxLength="10"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Image URL</label>
-                    <input
-                      type="text"
-                      value={countryForm.image_url}
-                      onChange={(e) => setCountryForm({...countryForm, image_url: e.target.value})}
-                      placeholder="https://example.com/image.jpg"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Description</label>
-                    <textarea
-                      value={countryForm.description}
-                      onChange={(e) => setCountryForm({...countryForm, description: e.target.value})}
-                      rows="3"
-                    />
-                  </div>
-
-                  <div className="form-actions">
-                    <button type="button" onClick={resetCountryForm} className="cancel-btn">
-                      Cancel
-                    </button>
-                    <button type="submit" className="submit-btn">
-                      {editingCountry ? 'Update Country' : 'Add Country'}
-                    </button>
-                  </div>
-                </form>
-              </div>
+    {/* Country Form Modal - Keep your existing modal */}
+    {showCountryForm && (
+      <div className="modal-overlay" onClick={resetCountryForm}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <h3>{editingCountry ? 'Edit Country' : 'Add New Country'}</h3>
+          <form onSubmit={handleCountrySubmit}>
+            <div className="form-group">
+              <label>Country Name *</label>
+              <input
+                type="text"
+                value={countryForm.name}
+                onChange={(e) => setCountryForm({...countryForm, name: e.target.value})}
+                required
+              />
             </div>
-          )}
 
-          {/* Countries Table */}
-          <div className="data-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Image</th>
-                  <th>Name</th>
-                  <th>Code</th>
-                  <th>Description</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {countries.map(country => (
-                  <tr key={country.id}>
-                    <td>{country.id}</td>
-                    <td>
-                      <img 
-                        src={country.image_url || 'https://via.placeholder.com/50'} 
-                        alt={country.name}
-                        className="table-img"
-                      />
-                    </td>
-                    <td>{country.name}</td>
-                    <td>{country.code}</td>
-                    <td>{country.description?.substring(0, 50)}...</td>
-                    <td className="action-buttons">
-                      <button 
-                        className="edit-btn"
-                        onClick={() => handleEditCountry(country)}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        className="delete-btn"
-                        onClick={() => handleDeleteCountry(country.id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            <div className="form-group">
+              <label>Country Code *</label>
+              <input
+                type="text"
+                value={countryForm.code}
+                onChange={(e) => setCountryForm({...countryForm, code: e.target.value.toUpperCase()})}
+                placeholder="IN, US, FR, etc."
+                maxLength="10"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Image URL</label>
+              <input
+                type="text"
+                value={countryForm.image_url}
+                onChange={(e) => setCountryForm({...countryForm, image_url: e.target.value})}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                value={countryForm.description}
+                onChange={(e) => setCountryForm({...countryForm, description: e.target.value})}
+                rows="3"
+              />
+            </div>
+
+            <div className="form-actions">
+              <button type="button" onClick={resetCountryForm} className="cancel-btn">
+                Cancel
+              </button>
+              <button type="submit" className="submit-btn">
+                {editingCountry ? 'Update Country' : 'Add Country'}
+              </button>
+            </div>
+          </form>
         </div>
+      </div>
+    )}
+
+    {/* ✨ ENHANCED Countries Table with Filters & Sorting */}
+    <div className="data-table">
+      {/* Filter Toggle Button for Mobile */}
+      <button 
+        className="filter-toggle-btn"
+        onClick={() => setShowCountryFilters(!showCountryFilters)}
+      >
+        <FiFilter size={18} />
+        {showCountryFilters ? 'Hide Filters' : 'Show Filters'}
+      </button>
+
+      {/* Clear Filters Button */}
+      {(countryFilters.id || countryFilters.name || countryFilters.code || 
+        countryFilters.description || countrySortConfig.key) && (
+        <button className="clear-filters-btn" onClick={clearCountryFilters}>
+          <FiX size={16} />
+          Clear All Filters
+        </button>
       )}
+
+      <table>
+        <thead>
+          <tr>
+            {/* ID Column */}
+            <th>
+              <div className="th-content">
+                <span>ID</span>
+                <button 
+                  className="sort-btn"
+                  onClick={() => handleCountrySort('id')}
+                >
+                  {countrySortConfig.key === 'id' ? (
+                    countrySortConfig.direction === 'asc' ? 
+                      <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+                  ) : (
+                    <FiChevronDown size={16} className="sort-icon-default" />
+                  )}
+                </button>
+              </div>
+              {showCountryFilters && (
+                <div className="filter-input-wrapper">
+                  <FiSearch size={14} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search ID..."
+                    value={countryFilters.id}
+                    onChange={(e) => handleCountryFilterChange('id', e.target.value)}
+                    className="filter-input"
+                  />
+                </div>
+              )}
+            </th>
+
+            {/* Image Column - NO FILTER */}
+            <th>
+              <div className="th-content">
+                <span>Image</span>
+              </div>
+            </th>
+
+            {/* Name Column */}
+            <th>
+              <div className="th-content">
+                <span>Name</span>
+                <button 
+                  className="sort-btn"
+                  onClick={() => handleCountrySort('name')}
+                >
+                  {countrySortConfig.key === 'name' ? (
+                    countrySortConfig.direction === 'asc' ? 
+                      <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+                  ) : (
+                    <FiChevronDown size={16} className="sort-icon-default" />
+                  )}
+                </button>
+              </div>
+              {showCountryFilters && (
+                <div className="filter-input-wrapper">
+                  <FiSearch size={14} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search name..."
+                    value={countryFilters.name}
+                    onChange={(e) => handleCountryFilterChange('name', e.target.value)}
+                    className="filter-input"
+                  />
+                </div>
+              )}
+            </th>
+
+            {/* Code Column */}
+            <th>
+              <div className="th-content">
+                <span>Code</span>
+                <button 
+                  className="sort-btn"
+                  onClick={() => handleCountrySort('code')}
+                >
+                  {countrySortConfig.key === 'code' ? (
+                    countrySortConfig.direction === 'asc' ? 
+                      <FiChevronUp size={16} /> : <FiChevronDown size={16} />
+                  ) : (
+                    <FiChevronDown size={16} className="sort-icon-default" />
+                  )}
+                </button>
+              </div>
+              {showCountryFilters && (
+                <div className="filter-input-wrapper">
+                  <FiSearch size={14} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search code..."
+                    value={countryFilters.code}
+                    onChange={(e) => handleCountryFilterChange('code', e.target.value)}
+                    className="filter-input"
+                  />
+                </div>
+              )}
+            </th>
+
+            {/* Description Column */}
+            <th>
+              <div className="th-content">
+                <span>Description</span>
+              </div>
+              {showCountryFilters && (
+                <div className="filter-input-wrapper">
+                  <FiSearch size={14} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search description..."
+                    value={countryFilters.description}
+                    onChange={(e) => handleCountryFilterChange('description', e.target.value)}
+                    className="filter-input"
+                  />
+                </div>
+              )}
+            </th>
+
+            {/* Actions Column */}
+            <th>
+              <div className="th-content">
+                <span>Actions</span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        
+        <tbody>
+          {getFilteredAndSortedCountries().map(country => (
+            <tr key={country.id}>
+              <td>{country.id}</td>
+              <td>
+                <img 
+                  src={country.image_url || 'https://via.placeholder.com/50'} 
+                  alt={country.name}
+                  className="table-img"
+                />
+              </td>
+              <td>{country.name}</td>
+              <td>{country.code}</td>
+              <td>
+                {country.description 
+                  ? (country.description.length > 50 
+                      ? `${country.description.substring(0, 50)}...` 
+                      : country.description)
+                  : 'No description'}
+              </td>
+              <td className="action-buttons">
+                {/* ✨ Icon Buttons instead of text buttons */}
+                <button 
+                  className="icon-btn edit-icon-btn"
+                  onClick={() => handleEditCountry(country)}
+                  title="Edit Country"
+                >
+                  <FiEdit2 size={16} />
+                </button>
+                <button 
+                  className="icon-btn delete-icon-btn"
+                  onClick={() => handleDeleteCountry(country.id)}
+                  title="Delete Country"
+                >
+                  <FiTrash2 size={16} />
+                </button>
+              </td>
+            </tr>
+          ))}
+          
+          {/* Empty State */}
+          {getFilteredAndSortedCountries().length === 0 && (
+            <tr>
+              <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+                No countries found matching your filters
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
     </div>
   );
 };
