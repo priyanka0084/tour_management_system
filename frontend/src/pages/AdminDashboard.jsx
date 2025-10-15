@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReportsManager from '../components/admin/ReportsManager';
 import DestinationManager from '../components/admin/DestinationManager';
 import PackageManager from '../components/admin/PackageManager';
 import BookingManager from '../components/admin/BookingManager';
@@ -79,7 +80,13 @@ const AdminDashboard = ({ user }) => {
             <span className="icon">🗺️</span>
             <span>Destinations</span>
           </button>
-          
+          <button 
+  className={activeTab === 'reports' ? 'active' : ''}
+  onClick={() => setActiveTab('reports')}
+>
+  <span className="icon">📊</span>
+  <span>Reports</span>
+</button>
           <button 
             className={activeTab === 'packages' ? 'active' : ''}
             onClick={() => setActiveTab('packages')}
@@ -184,6 +191,8 @@ const AdminDashboard = ({ user }) => {
 
           {/* Bookings Tab */}
           {activeTab === 'bookings' && <BookingManager />}
+          {/* Reports Tab */}
+{activeTab === 'reports' && <ReportsManager />}
         </div>
       </main>
     </div>

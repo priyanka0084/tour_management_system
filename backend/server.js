@@ -89,6 +89,7 @@ app.get('/health', (req, res) => {
 });
 
 // Import routes (with .js extension for ES modules)
+import adminReportsRoutes from './routes/admin/reports.js';
 import authRoutes from './routes/auth.js';
 import bookingRoutes from './routes/bookingpayment.js';
 import destinationsRoutes from './routes/destinations.js';
@@ -112,7 +113,7 @@ app.use('/api/admin/destinations', adminDestinationsRoutes);
 app.use('/api/admin/packages', adminPackagesRoutes);
 app.use('/api/admin/bookings', adminBookingsRoutes);
 app.use('/api/admin/users', adminUsersRoutes);
-
+app.use('/api/admin/reports', adminReportsRoutes);
 // User dashboard routes (NEW)
 app.use('/api/user', userDashboardRoutes);
 
