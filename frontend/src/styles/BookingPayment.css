@@ -822,3 +822,62 @@ body:has(.booking-page) {
     outline-offset: 2px;
   }
 }
+/* Price Breakdown Styles */
+.price-breakdown-box {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0ea5e9;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.price-breakdown-box h3 {
+  color: #0369a1;
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #bae6fd;
+  font-size: 1rem;
+}
+
+.breakdown-item:last-of-type {
+  border-bottom: none;
+}
+
+.breakdown-item span {
+  color: #475569;
+}
+
+.breakdown-item strong {
+  color: #0c4a6e;
+  font-size: 1.1rem;
+}
+
+.breakdown-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0 5px 0;
+  margin-top: 10px;
+  border-top: 2px solid #0ea5e9;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.breakdown-total span {
+  color: #0c4a6e;
+}
+
+.breakdown-total strong {
+  color: #0ea5e9;
+  font-size: 1.5rem;
+}

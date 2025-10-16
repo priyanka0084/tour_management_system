@@ -28,23 +28,26 @@ router.get('/:placeId', async (req, res) => {
 
         const query = `
             SELECT
-                pkg.id,
-                pkg.title,
-                pkg.description,
-                pkg.price,
-                pkg.duration_days,
-                pkg.services,
-                pkg.places_included,
-                pkg.itinerary,
-                p.name as place_name,
-                p.image_url as place_image,
-                p.rating as place_rating,
-                c.name as country_name
-            FROM packages pkg
-            JOIN places p ON pkg.place_id = p.id
-            JOIN countries c ON p.country_id = c.id
-            WHERE pkg.place_id = ?
-            ORDER BY pkg.price ASC
+        pkg.id,
+        pkg.title,
+        pkg.description,
+        pkg.price,
+        pkg.price_adult,
+        pkg.price_child,
+        pkg.price_infant,
+        pkg.duration_days,
+        pkg.services,
+        pkg.places_included,
+        pkg.itinerary,
+        p.name as place_name,
+        p.image_url as place_image,
+        p.rating as place_rating,
+        c.name as country_name
+    FROM packages pkg
+    JOIN places p ON pkg.place_id = p.id
+    JOIN countries c ON p.country_id = c.id
+    WHERE pkg.place_id = ?
+    ORDER BY pkg.price ASC
         `;
 
         const [rows] = await pool.execute(query, [placeId]);
@@ -81,24 +84,27 @@ router.get('/detail/:packageId', async (req, res) => {
 
         const query = `
             SELECT
-                pkg.id,
-                pkg.title,
-                pkg.description,
-                pkg.price,
-                pkg.duration_days,
-                pkg.services,
-                pkg.places_included,
-                pkg.itinerary,
-                p.name as place_name,
-                p.image_url as place_image,
-                p.rating as place_rating,
-                p.description as place_description,
-                c.name as country_name,
-                c.code as country_code
-            FROM packages pkg
-            JOIN places p ON pkg.place_id = p.id
-            JOIN countries c ON p.country_id = c.id
-            WHERE pkg.id = ?
+        pkg.id,
+        pkg.title,
+        pkg.description,
+        pkg.price,
+        pkg.price_adult,
+        pkg.price_child,
+        pkg.price_infant,
+        pkg.duration_days,
+        pkg.services,
+        pkg.places_included,
+        pkg.itinerary,
+        p.name as place_name,
+        p.image_url as place_image,
+        p.rating as place_rating,
+        p.description as place_description,
+        c.name as country_name,
+        c.code as country_code
+    FROM packages pkg
+    JOIN places p ON pkg.place_id = p.id
+    JOIN countries c ON p.country_id = c.id
+    WHERE pkg.id = ?
         `;
 
         const [rows] = await pool.execute(query, [packageId]);
@@ -306,5 +312,44 @@ router.post('/seed', async (req, res) => {
         res.status(500).json({ success: false, error: 'Failed to seed packages' });
     }
 });
+// GET /api/packages/pricing/:packageId - Get package pricing details only
+router.get('/pricing/:packageId', async (req, res) => {
+    try {
+        const { packageId } = req.params;
 
+        const query = `
+            SELECT
+                id,
+                title,
+                price,
+                price_adult,
+                price_child,
+                price_infant,
+                duration_days
+            FROM packages
+            WHERE id = ?
+        `;
+
+        const [rows] = await pool.execute(query, [packageId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Package not found' 
+            });
+        }
+
+        res.json({
+            success: true,
+            pricing: rows[0]
+        });
+
+    } catch (error) {
+        console.error('Get package pricing error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Internal server error' 
+        });
+    }
+});
 export default router;

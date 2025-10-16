@@ -203,5 +203,101 @@ router.post('/seed', async (req, res) => {
         res.status(500).json({ success: false, error: 'Failed to seed data' });
     }
 });
+// GET /api/destinations/search - Search and filter destinations
+router.get('/search', async (req, res) => {
+    try {
+        const { 
+            query = '', 
+            minPrice, 
+            maxPrice, 
+            rating 
+        } = req.query;
 
+        let searchQuery = `
+            SELECT
+                p.id,
+                p.name,
+                p.image_url,
+                p.description,
+                p.rating,
+                p.price_per_person,
+                p.duration_days,
+                c.name as country_name,
+                c.code as country_code,
+                c.id as country_id,
+                c.image_url as country_image,
+                'place' as type
+            FROM places p
+            JOIN countries c ON p.country_id = c.id
+            WHERE 1=1
+        `;
+
+        const params = [];
+
+        // Search by name (places or countries)
+        if (query) {
+            searchQuery += ` AND (p.name LIKE ? OR c.name LIKE ? OR p.description LIKE ?)`;
+            const searchTerm = `%${query}%`;
+            params.push(searchTerm, searchTerm, searchTerm);
+        }
+
+        // Filter by price
+        if (minPrice) {
+            searchQuery += ` AND p.price_per_person >= ?`;
+            params.push(minPrice);
+        }
+        if (maxPrice) {
+            searchQuery += ` AND p.price_per_person <= ?`;
+            params.push(maxPrice);
+        }
+
+        // Filter by rating
+        if (rating) {
+            searchQuery += ` AND p.rating >= ?`;
+            params.push(rating);
+        }
+
+        searchQuery += ` ORDER BY p.rating DESC, p.name ASC`;
+
+        const [places] = await pool.execute(searchQuery, params);
+
+        // Also get matching countries
+        let countryQuery = `
+            SELECT DISTINCT
+                c.id,
+                c.name,
+                c.code,
+                c.image_url,
+                c.description,
+                'country' as type
+            FROM countries c
+            WHERE 1=1
+        `;
+
+        const countryParams = [];
+
+        if (query) {
+            countryQuery += ` AND (c.name LIKE ? OR c.description LIKE ?)`;
+            const searchTerm = `%${query}%`;
+            countryParams.push(searchTerm, searchTerm);
+        }
+
+        countryQuery += ` ORDER BY c.name ASC`;
+
+        const [countries] = await pool.execute(countryQuery, countryParams);
+
+        res.json({
+            success: true,
+            results: {
+                places,
+                countries
+            },
+            totalResults: places.length + countries.length
+        });
+
+    } catch (error) {
+        console.error('Search destinations error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
 export default router;

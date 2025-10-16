@@ -55,13 +55,54 @@ const BookingPayment = () => {
 
   // ---------------- Passengers State ----------------
   const [passengers, setPassengers] = useState([]);
-
+  const [selectedPackage, setSelectedPackage] = useState(null);
+const [packagePricing, setPackagePricing] = useState({
+  price_adult: 0,
+  price_child: 0,
+  price_infant: 0
+});
+const [calculatedAmount, setCalculatedAmount] = useState(0);
+const [priceBreakdown, setPriceBreakdown] = useState({
+  adults: 0,
+  children: 0,
+  infants: 0,
+  total: 0
+});
   // ---------------- Helpers ----------------
   const parseIntSafe = (v) => {
     const n = parseInt(v, 10);
     return Number.isNaN(n) ? 0 : n;
   };
+  // Add after parseIntSafe function (around line ~70)
 
+// Calculate total price based on package pricing and passenger counts
+// REPLACE the calculateTotalPrice function with this safer version:
+
+const calculateTotalPrice = () => {
+  const adults = parseIntSafe(formData.adults);
+  const children = parseIntSafe(formData.children);
+  const infants = parseIntSafe(formData.infants);
+
+  // Ensure all pricing values are numbers
+  const adultPrice = Number(packagePricing.price_adult) || 0;
+  const childPrice = Number(packagePricing.price_child) || 0;
+  const infantPrice = Number(packagePricing.price_infant) || 0;
+
+  const adultsTotal = adults * adultPrice;
+  const childrenTotal = children * childPrice;
+  const infantsTotal = infants * infantPrice;
+  const total = adultsTotal + childrenTotal + infantsTotal;
+
+  setPriceBreakdown({
+    adults: adultsTotal,
+    children: childrenTotal,
+    infants: infantsTotal,
+    total: total
+  });
+
+  setCalculatedAmount(total);
+  return total;
+};
   const totalPassengers = parseIntSafe(formData.adults) + parseIntSafe(formData.children) + parseIntSafe(formData.infants);
 
   const getTomorrowDate = () => {
@@ -200,44 +241,51 @@ const BookingPayment = () => {
   };
 
   // ---------------- API Calls ----------------
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateBookingForm()) return;
-    setIsLoading(true);
-    setSuccessMessage("");
-    try {
-      const payload = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        tour_destination: formData.tour_destination,
-        tour_date: formData.tour_date,
-        departure: formData.departure,
-        adults: parseIntSafe(formData.adults),
-        children: parseIntSafe(formData.children),
-        infants: parseIntSafe(formData.infants),
-        special_requests: formData.special_requests,
-      };
+  // REPLACE the existing handleSubmit function with this updated version:
 
-      const res = await fetch(`${config.API_BASE_URL}/bookingpayment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.success && data.bookingId) {
-        setSuccessMessage("Booking created. Proceed to payment.");
-        setBookingId(data.bookingId);
-        setCurrentView("payment");
-      } else {
-        setErrors({ submit: data.error || "Failed to create booking" });
-      }
-    } catch (err) {
-      setErrors({ submit: "Network error. Please try again." });
-    } finally {
-      setIsLoading(false);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateBookingForm()) return;
+  setIsLoading(true);
+  setSuccessMessage("");
+  
+  try {
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      tour_destination: formData.tour_destination,
+      package_id: selectedPackage ? selectedPackage.id : null, // NEW: Include package ID
+      tour_date: formData.tour_date,
+      departure: formData.departure,
+      adults: parseIntSafe(formData.adults),
+      children: parseIntSafe(formData.children),
+      infants: parseIntSafe(formData.infants),
+      special_requests: formData.special_requests,
+      amount: calculatedAmount || 0 // NEW: Use calculated amount
+    };
+
+    const res = await fetch(`${config.API_BASE_URL}/bookingpayment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    
+    const data = await res.json();
+    
+    if (data.success && data.bookingId) {
+      setSuccessMessage("Booking created. Proceed to payment.");
+      setBookingId(data.bookingId);
+      setCurrentView("payment");
+    } else {
+      setErrors({ submit: data.error || "Failed to create booking" });
     }
-  };
+  } catch (err) {
+    setErrors({ submit: "Network error. Please try again." });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handlePayment = async (e) => {
   e.preventDefault();
@@ -252,7 +300,7 @@ const BookingPayment = () => {
   setPaymentStatus("");
 
   try {
-    const amount = totalPassengers * PRICE_PER_PASSENGER;
+     const amount = calculatedAmount || (totalPassengers * 100);
 
     const payload = {
       bookingId,
@@ -341,21 +389,43 @@ const BookingPayment = () => {
   const location = useLocation();
 
   // Handle pre-filled destination from Packages page
-  useEffect(() => {
-    if (location.state && location.state.selectedDestination) {
-      const { selectedDestination } = location.state;
-      let destinationName = '';
-      if (typeof selectedDestination === 'string') {
-        destinationName = selectedDestination;
-      } else if (typeof selectedDestination === 'object' && selectedDestination !== null) {
-        destinationName = selectedDestination.name || selectedDestination.displayName || '';
-      }
-      setFormData(prev => ({
-        ...prev,
-        tour_destination: destinationName
-      }));
+  // REPLACE the existing useEffect that handles location.state with this:
+
+useEffect(() => {
+  if (location.state && location.state.packageDetails) {
+    const { selectedDestination, packageDetails } = location.state;
+    
+    // Set form destination
+    let destinationName = '';
+    if (typeof selectedDestination === 'string') {
+      destinationName = selectedDestination;
+    } else if (typeof selectedDestination === 'object' && selectedDestination !== null) {
+      destinationName = selectedDestination.name || selectedDestination.displayName || '';
     }
-  }, [location.state]);
+    
+    // Set package data
+    setSelectedPackage(packageDetails);
+    
+    // Set pricing from package
+    setPackagePricing({
+      price_adult: packageDetails.price_adult || packageDetails.price || 100,
+      price_child: packageDetails.price_child || (packageDetails.price * 0.4) || 40,
+      price_infant: packageDetails.price_infant || (packageDetails.price * 0.2) || 20
+    });
+    
+    // Update form data
+    setFormData(prev => ({
+      ...prev,
+      tour_destination: destinationName
+    }));
+  }
+}, [location.state]);
+// Add this NEW useEffect to recalculate price when adults/children/infants change
+useEffect(() => {
+  if (selectedPackage) {
+    calculateTotalPrice();
+  }
+}, [formData.adults, formData.children, formData.infants, packagePricing]);
 
   // ---------------- Render ----------------
   return (
@@ -522,7 +592,35 @@ const BookingPayment = () => {
                     placeholder="Any special requirements or requests..."
                   ></textarea>
                 </div>
+                {/* Add this AFTER Special Requests textarea */}
 
+{/* Price Breakdown Section */}
+                {/* Price Breakdown Section - FIXED VERSION */}
+{selectedPackage && (
+  <div className="price-breakdown-box">
+    <h3>💰 Price Breakdown</h3>
+    <div className="breakdown-item">
+      <span>Adults ({formData.adults} × ₹{Number(packagePricing.price_adult || 0).toFixed(2)})</span>
+      <strong>₹{Number(priceBreakdown.adults || 0).toFixed(2)}</strong>
+    </div>
+    {formData.children > 0 && (
+      <div className="breakdown-item">
+        <span>Children ({formData.children} × ₹{Number(packagePricing.price_child || 0).toFixed(2)})</span>
+        <strong>₹{Number(priceBreakdown.children || 0).toFixed(2)}</strong>
+      </div>
+    )}
+    {formData.infants > 0 && (
+      <div className="breakdown-item">
+        <span>Infants ({formData.infants} × ₹{Number(packagePricing.price_infant || 0).toFixed(2)})</span>
+        <strong>₹{Number(priceBreakdown.infants || 0).toFixed(2)}</strong>
+      </div>
+    )}
+    <div className="breakdown-total">
+      <span>Total Amount</span>
+      <strong>₹{Number(priceBreakdown.total || 0).toFixed(2)}</strong>
+    </div>
+  </div>
+)}
                 {/* Summary */}
                 <div className="summary-box">
                   <strong>Total Passengers: {totalPassengers}</strong>
@@ -667,10 +765,11 @@ const BookingPayment = () => {
               ))}
 
               {/* Payment Info */}
-              <h3>Payment Information</h3>
-              <div style={{ marginBottom: "0.8rem" }}>
-                <strong>Amount to pay: ₹{(totalPassengers * PRICE_PER_PASSENGER).toFixed(2)}</strong>
-              </div>
+              {/* Payment Information - FIXED VERSION */}
+<h3>Payment Information</h3>
+<div style={{ marginBottom: "0.8rem" }}>
+  <strong>Amount to pay: ₹{Number(calculatedAmount || 0).toFixed(2)}</strong>
+</div>
 
               <div className="form-group">
                 <label>Card Number</label>

@@ -11,20 +11,49 @@ const emailLimiter = rateLimit({
     max: 3, // limit each IP to 3 requests per windowMs
     message: { success: false, error: 'Too many email requests. Please try again after 15 minutes.' }
 });
+const calculateBookingAmount = async (packageId, adults, children, infants) => {
+    try {
+        const [rows] = await pool.execute(
+            'SELECT price_adult, price_child, price_infant FROM packages WHERE id = ?',
+            [packageId]
+        );
 
+        if (rows.length === 0) {
+            throw new Error('Package not found');
+        }
+
+        const { price_adult, price_child, price_infant } = rows[0];
+
+        const totalAmount = 
+            (adults * price_adult) + 
+            (children * price_child) + 
+            (infants * price_infant);
+
+        return parseFloat(totalAmount.toFixed(2));
+
+    } catch (error) {
+        console.error('Calculate booking amount error:', error);
+        throw error;
+    }
+};
 // ---------------- BOOKING ROUTES ----------------
 
 // POST /api/bookings - Create new booking
 // In backend/routes/bookingpayment.js
+// Replace the existing POST '/' route with this updated version
 router.post('/', async (req, res) => {
     try {
         const {
             name,
             email,
             phone,
-            tour_destination, // Keep for backward compatibility
-            package_id,       // NEW: Add this
+            tour_destination,
+            package_id,
             tour_date,
+            departure,
+            adults,
+            children,
+            infants,
             special_requests,
             amount
         } = req.body;
@@ -37,13 +66,13 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // NEW: Get package details if package_id is provided
+        // Get package details if package_id is provided
         let finalDestination = tour_destination;
         let finalPackageId = package_id || null;
 
         if (package_id) {
             const [packages] = await pool.query(
-                'SELECT id, title, price FROM packages WHERE id = ?',
+                'SELECT id, title FROM packages WHERE id = ?',
                 [package_id]
             );
             
@@ -53,12 +82,26 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // Insert booking with package_id
+        // Insert booking with passenger counts
         const [result] = await pool.execute(
             `INSERT INTO bookings 
-            (name, email, phone, tour_destination, package_id, tour_date, special_requests, amount, booking_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [name, email, phone, finalDestination, finalPackageId, tour_date, special_requests || null, amount || 0]
+            (name, email, phone, tour_destination, package_id, tour_date, departure, 
+             adults, children, infants, special_requests, amount, booking_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [
+                name, 
+                email, 
+                phone, 
+                finalDestination, 
+                finalPackageId, 
+                tour_date, 
+                departure || null,
+                adults || 1, 
+                children || 0, 
+                infants || 0, 
+                special_requests || null, 
+                amount || 0
+            ]
         );
 
         res.status(201).json({
@@ -75,7 +118,6 @@ router.post('/', async (req, res) => {
         });
     }
 });
-
 // GET /api/bookings - Get all bookings
 router.get('/', async (req, res) => {
     try {
