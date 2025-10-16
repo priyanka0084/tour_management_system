@@ -24,6 +24,37 @@ const ReportsManager = () => {
   const [destinationAnalytics, setDestinationAnalytics] = useState([]);
   const [revenuePeriod, setRevenuePeriod] = useState('day');
 
+  // Filter states for Top Customers
+  const [customerFilters, setCustomerFilters] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    minBookings: '',
+    maxBookings: '',
+    minSpent: '',
+    maxSpent: ''
+  });
+
+  // Filter states for Package Analytics
+  const [packageFilters, setPackageFilters] = useState({
+    name: '',
+    minBookings: '',
+    maxBookings: '',
+    minRevenue: '',
+    maxRevenue: ''
+  });
+
+  // Filter states for Destinations
+  const [destinationFilters, setDestinationFilters] = useState({
+    name: '',
+    minBookings: '',
+    maxBookings: '',
+    minRevenue: '',
+    maxRevenue: ''
+  });
+
+  const [sortConfig, setSortConfig] = useState({ key: 'total_spent', direction: 'desc' });
+
   // Chart colors
   const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
 
@@ -81,11 +112,25 @@ const ReportsManager = () => {
 
   const fetchPackageAnalytics = async () => {
     try {
-      const response = await fetch(`${config.API_BASE_URL}/admin/reports/packages-analytics?${buildQueryParams()}`);
+      console.log('🔵 Fetching package analytics...');
+      const url = `${config.API_BASE_URL}/admin/reports/packages-analytics?${buildQueryParams()}`;
+      console.log('📡 Request URL:', url);
+      
+      const response = await fetch(url);
       const data = await response.json();
-      if (data.success) setPackageAnalytics(data.data);
+      
+      console.log('📦 Package analytics API response:', data);
+      console.log('📦 Data array length:', data.data?.length);
+      console.log('📦 First package:', data.data?.[0]);
+      
+      if (data.success) {
+        setPackageAnalytics(data.data);
+        console.log('✅ Package analytics state updated:', data.data.length, 'items');
+      } else {
+        console.error('❌ API returned error:', data.error);
+      }
     } catch (error) {
-      console.error('Error fetching package analytics:', error);
+      console.error('❌ Error fetching package analytics:', error);
     }
   };
 
@@ -113,7 +158,13 @@ const ReportsManager = () => {
     try {
       const response = await fetch(`${config.API_BASE_URL}/admin/reports/top-customers?${buildQueryParams()}&limit=10`);
       const data = await response.json();
-      if (data.success) setTopCustomers(data.data);
+      console.log('Top customers API response:', data); // Debug log
+      if (data.success) {
+        setTopCustomers(data.data);
+        console.log('Top customers data:', data.data); // Debug log
+      } else {
+        console.error('API returned error:', data.error);
+      }
     } catch (error) {
       console.error('Error fetching top customers:', error);
     }
@@ -170,6 +221,235 @@ const ReportsManager = () => {
   const clearDateRange = () => {
     setDateRange({ start_date: '', end_date: '' });
   };
+
+  // Filter and sort customers
+  const handleCustomerFilterChange = (e) => {
+    setCustomerFilters({ ...customerFilters, [e.target.name]: e.target.value });
+  };
+
+  const clearCustomerFilters = () => {
+    setCustomerFilters({
+      name: '',
+      email: '',
+      phone: '',
+      minBookings: '',
+      maxBookings: '',
+      minSpent: '',
+      maxSpent: ''
+    });
+  };
+
+  const handlePackageFilterChange = (e) => {
+    setPackageFilters({ ...packageFilters, [e.target.name]: e.target.value });
+  };
+
+  const clearPackageFilters = () => {
+    setPackageFilters({
+      name: '',
+      minBookings: '',
+      maxBookings: '',
+      minRevenue: '',
+      maxRevenue: ''
+    });
+  };
+
+  const handleDestinationFilterChange = (e) => {
+    setDestinationFilters({ ...destinationFilters, [e.target.name]: e.target.value });
+  };
+
+  const clearDestinationFilters = () => {
+    setDestinationFilters({
+      name: '',
+      minBookings: '',
+      maxBookings: '',
+      minRevenue: '',
+      maxRevenue: ''
+    });
+  };
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getFilteredAndSortedCustomers = () => {
+    let filtered = [...topCustomers];
+
+    // Apply filters
+    if (customerFilters.name) {
+      filtered = filtered.filter(customer =>
+        customer.customer_name.toLowerCase().includes(customerFilters.name.toLowerCase())
+      );
+    }
+
+    if (customerFilters.email) {
+      filtered = filtered.filter(customer =>
+        customer.email.toLowerCase().includes(customerFilters.email.toLowerCase())
+      );
+    }
+
+    if (customerFilters.phone) {
+      filtered = filtered.filter(customer =>
+        customer.phone.includes(customerFilters.phone)
+      );
+    }
+
+    if (customerFilters.minBookings) {
+      filtered = filtered.filter(customer =>
+        customer.total_bookings >= parseInt(customerFilters.minBookings)
+      );
+    }
+
+    if (customerFilters.maxBookings) {
+      filtered = filtered.filter(customer =>
+        customer.total_bookings <= parseInt(customerFilters.maxBookings)
+      );
+    }
+
+    if (customerFilters.minSpent) {
+      filtered = filtered.filter(customer =>
+        customer.total_spent >= parseFloat(customerFilters.minSpent)
+      );
+    }
+
+    if (customerFilters.maxSpent) {
+      filtered = filtered.filter(customer =>
+        customer.total_spent <= parseFloat(customerFilters.maxSpent)
+      );
+    }
+
+    // Apply sorting
+    if (sortConfig.key) {
+      filtered.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredCustomers = getFilteredAndSortedCustomers();
+
+  // Filter and sort packages
+  const getFilteredAndSortedPackages = () => {
+    console.log('🔍 Filtering packages. Total packages:', packageAnalytics.length);
+    console.log('🔍 Current filters:', packageFilters);
+    
+    let filtered = [...packageAnalytics];
+
+    if (packageFilters.name) {
+      filtered = filtered.filter(pkg =>
+        pkg.package_name.toLowerCase().includes(packageFilters.name.toLowerCase())
+      );
+      console.log('🔍 After name filter:', filtered.length);
+    }
+
+    if (packageFilters.minBookings) {
+      filtered = filtered.filter(pkg =>
+        pkg.total_bookings >= parseInt(packageFilters.minBookings)
+      );
+      console.log('🔍 After minBookings filter:', filtered.length);
+    }
+
+    if (packageFilters.maxBookings) {
+      filtered = filtered.filter(pkg =>
+        pkg.total_bookings <= parseInt(packageFilters.maxBookings)
+      );
+      console.log('🔍 After maxBookings filter:', filtered.length);
+    }
+
+    if (packageFilters.minRevenue) {
+      filtered = filtered.filter(pkg =>
+        pkg.total_revenue >= parseFloat(packageFilters.minRevenue)
+      );
+      console.log('🔍 After minRevenue filter:', filtered.length);
+    }
+
+    if (packageFilters.maxRevenue) {
+      filtered = filtered.filter(pkg =>
+        pkg.total_revenue <= parseFloat(packageFilters.maxRevenue)
+      );
+      console.log('🔍 After maxRevenue filter:', filtered.length);
+    }
+
+    if (sortConfig.key && sortConfig.key !== 'total_spent') {
+      filtered.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    console.log('✅ Final filtered packages:', filtered.length);
+    console.log('✅ First filtered package:', filtered[0]);
+    
+    return filtered;
+  };
+
+  const filteredPackages = getFilteredAndSortedPackages();
+
+  // Filter and sort destinations
+  const getFilteredAndSortedDestinations = () => {
+    let filtered = [...destinationAnalytics];
+
+    if (destinationFilters.name) {
+      filtered = filtered.filter(dest =>
+        dest.destination.toLowerCase().includes(destinationFilters.name.toLowerCase())
+      );
+    }
+
+    if (destinationFilters.minBookings) {
+      filtered = filtered.filter(dest =>
+        dest.total_bookings >= parseInt(destinationFilters.minBookings)
+      );
+    }
+
+    if (destinationFilters.maxBookings) {
+      filtered = filtered.filter(dest =>
+        dest.total_bookings <= parseInt(destinationFilters.maxBookings)
+      );
+    }
+
+    if (destinationFilters.minRevenue) {
+      filtered = filtered.filter(dest =>
+        dest.total_revenue >= parseFloat(destinationFilters.minRevenue)
+      );
+    }
+
+    if (destinationFilters.maxRevenue) {
+      filtered = filtered.filter(dest =>
+        dest.total_revenue <= parseFloat(destinationFilters.maxRevenue)
+      );
+    }
+
+    if (sortConfig.key && sortConfig.key !== 'total_spent') {
+      filtered.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredDestinations = getFilteredAndSortedDestinations();
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -340,45 +620,202 @@ const ReportsManager = () => {
           <div className="report-section">
             <h3 className="section-title">📦 Package Performance Analytics</h3>
             
+            {/* Filter Controls */}
+            {Object.values(packageFilters).some(val => val !== '') && (
+              <button onClick={clearPackageFilters} className="clear-filters-btn" style={{ marginBottom: '15px' }}>
+                ✕ Clear All Filters
+              </button>
+            )}
+            
             {packageAnalytics.length > 0 ? (
               <>
+
                 <div className="chart-container">
                   <h4>Top Packages by Revenue</h4>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={packageAnalytics.slice(0, 10)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="package_name" angle={-45} textAnchor="end" height={100} />
-                      <YAxis />
-                      <Tooltip formatter={(value) => formatCurrency(value)} />
-                      <Legend />
-                      <Bar dataKey="total_revenue" fill="#667eea" name="Total Revenue" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {filteredPackages.slice(0, 10).length > 0 ? (
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={filteredPackages.slice(0, 10)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="package_name" angle={-45} textAnchor="end" height={100} />
+                        <YAxis />
+                        <Tooltip formatter={(value) => formatCurrency(value)} />
+                        <Legend />
+                        <Bar dataKey="total_revenue" fill="#667eea" name="Total Revenue" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div style={{ padding: '50px', textAlign: 'center', color: '#999' }}>
+                      No data available for chart
+                    </div>
+                  )}
                 </div>
 
                 <div className="data-table">
                   <table>
                     <thead>
                       <tr>
-                        <th>Package Name</th>
-                        <th>Total Bookings</th>
-                        <th>Successful</th>
-                        <th>Pending</th>
-                        <th>Total Revenue</th>
-                        <th>Avg Value</th>
+                        <th>
+                          <div className="th-content">
+                            <span>Package Name</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('package_name')}
+                              title="Sort by name"
+                            >
+                              {sortConfig.key === 'package_name' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                          <div className="filter-input-wrapper">
+                            <span className="search-icon">🔍</span>
+                            <input
+                              type="text"
+                              name="name"
+                              value={packageFilters.name}
+                              onChange={handlePackageFilterChange}
+                              placeholder="Search package..."
+                              className="filter-input"
+                            />
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Total Bookings</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('total_bookings')}
+                              title="Sort by bookings"
+                            >
+                              {sortConfig.key === 'total_bookings' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                          <div className="filter-input-wrapper" style={{ display: 'flex', gap: '6px' }}>
+                            <input
+                              type="number"
+                              name="minBookings"
+                              value={packageFilters.minBookings}
+                              onChange={handlePackageFilterChange}
+                              placeholder="Min"
+                              className="filter-input"
+                              style={{ width: '70px', padding: '10px 6px' }}
+                            />
+                            <input
+                              type="number"
+                              name="maxBookings"
+                              value={packageFilters.maxBookings}
+                              onChange={handlePackageFilterChange}
+                              placeholder="Max"
+                              className="filter-input"
+                              style={{ width: '70px', padding: '10px 6px' }}
+                            />
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Successful</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('successful_bookings')}
+                              title="Sort by successful"
+                            >
+                              {sortConfig.key === 'successful_bookings' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Pending</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('pending_bookings')}
+                              title="Sort by pending"
+                            >
+                              {sortConfig.key === 'pending_bookings' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Total Revenue</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('total_revenue')}
+                              title="Sort by revenue"
+                            >
+                              {sortConfig.key === 'total_revenue' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                          <div className="filter-input-wrapper" style={{ display: 'flex', gap: '6px' }}>
+                            <input
+                              type="number"
+                              name="minRevenue"
+                              value={packageFilters.minRevenue}
+                              onChange={handlePackageFilterChange}
+                              placeholder="Min"
+                              className="filter-input"
+                              style={{ width: '75px', padding: '10px 6px' }}
+                            />
+                            <input
+                              type="number"
+                              name="maxRevenue"
+                              value={packageFilters.maxRevenue}
+                              onChange={handlePackageFilterChange}
+                              placeholder="Max"
+                              className="filter-input"
+                              style={{ width: '75px', padding: '10px 6px' }}
+                            />
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Avg Value</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('avg_booking_value')}
+                              title="Sort by average"
+                            >
+                              {sortConfig.key === 'avg_booking_value' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {packageAnalytics.map((pkg, index) => (
-                        <tr key={index}>
-                          <td><strong>{pkg.package_name}</strong></td>
-                          <td>{pkg.total_bookings}</td>
-                          <td><span className="badge success">{pkg.successful_bookings}</span></td>
-                          <td><span className="badge warning">{pkg.pending_bookings}</span></td>
-                          <td><strong>{formatCurrency(pkg.total_revenue)}</strong></td>
-                          <td>{formatCurrency(pkg.avg_booking_value)}</td>
+                      {filteredPackages.length > 0 ? (
+                        filteredPackages.map((pkg, index) => (
+                          <tr key={index}>
+                            <td><strong>{pkg.package_name}</strong></td>
+                            <td>{pkg.total_bookings}</td>
+                            <td><span className="badge success">{pkg.successful_bookings}</span></td>
+                            <td><span className="badge warning">{pkg.pending_bookings}</span></td>
+                            <td><strong>{formatCurrency(pkg.total_revenue)}</strong></td>
+                            <td>{formatCurrency(pkg.avg_booking_value)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                            No packages match the selected filters
+                          </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -481,43 +918,240 @@ const ReportsManager = () => {
           <div className="report-section">
             <h3 className="section-title">👥 Top Customers by Spending</h3>
             
+            {/* Filter Controls */}
+            {Object.values(customerFilters).some(val => val !== '') && (
+              <button onClick={clearCustomerFilters} className="clear-filters-btn" style={{ marginBottom: '15px' }}>
+                ✕ Clear All Filters
+              </button>
+            )}
+            
             {topCustomers.length > 0 ? (
               <div className="data-table">
                 <table>
                   <thead>
                     <tr>
-                      <th>Rank</th>
-                      <th>Customer Name</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                      <th>Total Bookings</th>
-                      <th>Total Spent</th>
-                      <th>Avg Booking</th>
-                      <th>Last Booking</th>
+                      <th>
+                        <div className="th-content">
+                          <span>Rank</span>
+                        </div>
+                      </th>
+                      <th>
+                        <div className="th-content">
+                          <span>Customer Name</span>
+                          <button 
+                            className="sort-btn" 
+                            onClick={() => handleSort('customer_name')}
+                            title="Sort by name"
+                          >
+                            {sortConfig.key === 'customer_name' 
+                              ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                              : '⇅'
+                            }
+                          </button>
+                        </div>
+                        <div className="filter-input-wrapper">
+                          <span className="search-icon">🔍</span>
+                          <input
+                            type="text"
+                            name="name"
+                            value={customerFilters.name}
+                            onChange={handleCustomerFilterChange}
+                            placeholder="Search name..."
+                            className="filter-input"
+                          />
+                        </div>
+                      </th>
+                      <th>
+                        <div className="th-content">
+                          <span>Email</span>
+                          <button 
+                            className="sort-btn" 
+                            onClick={() => handleSort('email')}
+                            title="Sort by email"
+                          >
+                            {sortConfig.key === 'email' 
+                              ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                              : '⇅'
+                            }
+                          </button>
+                        </div>
+                        <div className="filter-input-wrapper">
+                          <span className="search-icon">🔍</span>
+                          <input
+                            type="text"
+                            name="email"
+                            value={customerFilters.email}
+                            onChange={handleCustomerFilterChange}
+                            placeholder="Search email..."
+                            className="filter-input"
+                          />
+                        </div>
+                      </th>
+                      <th>
+                        <div className="th-content">
+                          <span>Phone</span>
+                          <button 
+                            className="sort-btn" 
+                            onClick={() => handleSort('phone')}
+                            title="Sort by phone"
+                          >
+                            {sortConfig.key === 'phone' 
+                              ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                              : '⇅'
+                            }
+                          </button>
+                        </div>
+                        <div className="filter-input-wrapper">
+                          <span className="search-icon">🔍</span>
+                          <input
+                            type="text"
+                            name="phone"
+                            value={customerFilters.phone}
+                            onChange={handleCustomerFilterChange}
+                            placeholder="Search phone..."
+                            className="filter-input"
+                          />
+                        </div>
+                      </th>
+                      <th>
+                        <div className="th-content">
+                          <span>Total Bookings</span>
+                          <button 
+                            className="sort-btn" 
+                            onClick={() => handleSort('total_bookings')}
+                            title="Sort by bookings"
+                          >
+                            {sortConfig.key === 'total_bookings' 
+                              ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                              : '⇅'
+                            }
+                          </button>
+                        </div>
+                        <div className="filter-input-wrapper" style={{ display: 'flex', gap: '6px' }}>
+                          <input
+                            type="number"
+                            name="minBookings"
+                            value={customerFilters.minBookings}
+                            onChange={handleCustomerFilterChange}
+                            placeholder="Min"
+                            className="filter-input"
+                            style={{ width: '70px', padding: '10px 6px' }}
+                          />
+                          <input
+                            type="number"
+                            name="maxBookings"
+                            value={customerFilters.maxBookings}
+                            onChange={handleCustomerFilterChange}
+                            placeholder="Max"
+                            className="filter-input"
+                            style={{ width: '70px', padding: '10px 6px' }}
+                          />
+                        </div>
+                      </th>
+                      <th>
+                        <div className="th-content">
+                          <span>Total Spent</span>
+                          <button 
+                            className="sort-btn" 
+                            onClick={() => handleSort('total_spent')}
+                            title="Sort by spending"
+                          >
+                            {sortConfig.key === 'total_spent' 
+                              ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                              : '⇅'
+                            }
+                          </button>
+                        </div>
+                        <div className="filter-input-wrapper" style={{ display: 'flex', gap: '6px' }}>
+                          <input
+                            type="number"
+                            name="minSpent"
+                            value={customerFilters.minSpent}
+                            onChange={handleCustomerFilterChange}
+                            placeholder="Min"
+                            className="filter-input"
+                            style={{ width: '75px', padding: '10px 6px' }}
+                          />
+                          <input
+                            type="number"
+                            name="maxSpent"
+                            value={customerFilters.maxSpent}
+                            onChange={handleCustomerFilterChange}
+                            placeholder="Max"
+                            className="filter-input"
+                            style={{ width: '75px', padding: '10px 6px' }}
+                          />
+                        </div>
+                      </th>
+                      <th>
+                        <div className="th-content">
+                          <span>Avg Booking</span>
+                          <button 
+                            className="sort-btn" 
+                            onClick={() => handleSort('avg_booking_value')}
+                            title="Sort by average"
+                          >
+                            {sortConfig.key === 'avg_booking_value' 
+                              ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                              : '⇅'
+                            }
+                          </button>
+                        </div>
+                      </th>
+                      <th>
+                        <div className="th-content">
+                          <span>Last Booking</span>
+                          <button 
+                            className="sort-btn" 
+                            onClick={() => handleSort('last_booking_date')}
+                            title="Sort by date"
+                          >
+                            {sortConfig.key === 'last_booking_date' 
+                              ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                              : '⇅'
+                            }
+                          </button>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {topCustomers.map((customer, index) => (
-                      <tr key={index} className={index < 3 ? 'top-customer' : ''}>
-                        <td>
-                          <span className="rank-badge">
-                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
-                          </span>
+                    {filteredCustomers.length > 0 ? (
+                      filteredCustomers.map((customer, index) => (
+                        <tr key={index} className={index < 3 ? 'top-customer' : ''}>
+                          <td>
+                            <span className="rank-badge">
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                            </span>
+                          </td>
+                          <td><strong>{customer.customer_name}</strong></td>
+                          <td>{customer.email}</td>
+                          <td>{customer.phone}</td>
+                          <td>{customer.total_bookings}</td>
+                          <td><strong>{formatCurrency(customer.total_spent)}</strong></td>
+                          <td>{formatCurrency(customer.avg_booking_value)}</td>
+                          <td>{new Date(customer.last_booking_date).toLocaleDateString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                          No customers match the selected filters
                         </td>
-                        <td><strong>{customer.customer_name}</strong></td>
-                        <td>{customer.email}</td>
-                        <td>{customer.phone}</td>
-                        <td>{customer.total_bookings}</td>
-                        <td><strong>{formatCurrency(customer.total_spent)}</strong></td>
-                        <td>{formatCurrency(customer.avg_booking_value)}</td>
-                        <td>{new Date(customer.last_booking_date).toLocaleDateString()}</td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="no-data">No customer data available</div>
+              <div className="no-data">
+                <p>No customer data available</p>
+                <p style={{ fontSize: '14px', color: '#999', marginTop: '10px' }}>
+                  {dateRange.start_date || dateRange.end_date 
+                    ? 'Try clearing the date filter or selecting a different date range' 
+                    : 'No bookings found in the database'}
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -573,12 +1207,19 @@ const ReportsManager = () => {
           <div className="report-section">
             <h3 className="section-title">🗺️ Destination Performance</h3>
             
+            {/* Filter Controls */}
+            {Object.values(destinationFilters).some(val => val !== '') && (
+              <button onClick={clearDestinationFilters} className="clear-filters-btn" style={{ marginBottom: '15px' }}>
+                ✕ Clear All Filters
+              </button>
+            )}
+            
             {destinationAnalytics.length > 0 ? (
               <>
                 <div className="chart-container">
                   <h4>Top Destinations by Bookings</h4>
                   <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={destinationAnalytics.slice(0, 10)}>
+                    <BarChart data={filteredDestinations.slice(0, 10)}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="destination" angle={-45} textAnchor="end" height={100} />
                       <YAxis />
@@ -594,23 +1235,152 @@ const ReportsManager = () => {
                   <table>
                     <thead>
                       <tr>
-                        <th>Destination</th>
-                        <th>Total Bookings</th>
-                        <th>Successful</th>
-                        <th>Total Revenue</th>
-                        <th>Avg Revenue</th>
+                        <th>
+                          <div className="th-content">
+                            <span>Destination</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('destination')}
+                              title="Sort by name"
+                            >
+                              {sortConfig.key === 'destination' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                          <div className="filter-input-wrapper">
+                            <span className="search-icon">🔍</span>
+                            <input
+                              type="text"
+                              name="name"
+                              value={destinationFilters.name}
+                              onChange={handleDestinationFilterChange}
+                              placeholder="Search destination..."
+                              className="filter-input"
+                            />
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Total Bookings</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('total_bookings')}
+                              title="Sort by bookings"
+                            >
+                              {sortConfig.key === 'total_bookings' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                          <div className="filter-input-wrapper" style={{ display: 'flex', gap: '6px' }}>
+                            <input
+                              type="number"
+                              name="minBookings"
+                              value={destinationFilters.minBookings}
+                              onChange={handleDestinationFilterChange}
+                              placeholder="Min"
+                              className="filter-input"
+                              style={{ width: '70px', padding: '10px 6px' }}
+                            />
+                            <input
+                              type="number"
+                              name="maxBookings"
+                              value={destinationFilters.maxBookings}
+                              onChange={handleDestinationFilterChange}
+                              placeholder="Max"
+                              className="filter-input"
+                              style={{ width: '70px', padding: '10px 6px' }}
+                            />
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Successful</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('successful_bookings')}
+                              title="Sort by successful"
+                            >
+                              {sortConfig.key === 'successful_bookings' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Total Revenue</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('total_revenue')}
+                              title="Sort by revenue"
+                            >
+                              {sortConfig.key === 'total_revenue' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                          <div className="filter-input-wrapper" style={{ display: 'flex', gap: '6px' }}>
+                            <input
+                              type="number"
+                              name="minRevenue"
+                              value={destinationFilters.minRevenue}
+                              onChange={handleDestinationFilterChange}
+                              placeholder="Min"
+                              className="filter-input"
+                              style={{ width: '75px', padding: '10px 6px' }}
+                            />
+                            <input
+                              type="number"
+                              name="maxRevenue"
+                              value={destinationFilters.maxRevenue}
+                              onChange={handleDestinationFilterChange}
+                              placeholder="Max"
+                              className="filter-input"
+                              style={{ width: '75px', padding: '10px 6px' }}
+                            />
+                          </div>
+                        </th>
+                        <th>
+                          <div className="th-content">
+                            <span>Avg Revenue</span>
+                            <button 
+                              className="sort-btn" 
+                              onClick={() => handleSort('avg_revenue')}
+                              title="Sort by average"
+                            >
+                              {sortConfig.key === 'avg_revenue' 
+                                ? (sortConfig.direction === 'asc' ? '▲' : '▼')
+                                : '⇅'
+                              }
+                            </button>
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {destinationAnalytics.map((dest, index) => (
-                        <tr key={index}>
-                          <td><strong>{dest.destination}</strong></td>
-                          <td>{dest.total_bookings}</td>
-                          <td><span className="badge success">{dest.successful_bookings}</span></td>
-                          <td><strong>{formatCurrency(dest.total_revenue)}</strong></td>
-                          <td>{formatCurrency(dest.avg_revenue)}</td>
+                      {filteredDestinations.length > 0 ? (
+                        filteredDestinations.map((dest, index) => (
+                          <tr key={index}>
+                            <td><strong>{dest.destination}</strong></td>
+                            <td>{dest.total_bookings}</td>
+                            <td><span className="badge success">{dest.successful_bookings}</span></td>
+                            <td><strong>{formatCurrency(dest.total_revenue)}</strong></td>
+                            <td>{formatCurrency(dest.avg_revenue)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                            No destinations match the selected filters
+                          </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>

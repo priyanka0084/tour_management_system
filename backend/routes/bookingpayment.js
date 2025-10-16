@@ -15,58 +15,51 @@ const emailLimiter = rateLimit({
 // ---------------- BOOKING ROUTES ----------------
 
 // POST /api/bookings - Create new booking
+// In backend/routes/bookingpayment.js
 router.post('/', async (req, res) => {
     try {
         const {
             name,
             email,
             phone,
-            tour_destination,
+            tour_destination, // Keep for backward compatibility
+            package_id,       // NEW: Add this
             tour_date,
-            departure,
-            adults,
-            children,
-            infants,
-            special_requests
+            special_requests,
+            amount
         } = req.body;
 
-        if (!name || !email || !phone || !tour_destination || !tour_date) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Missing required fields' 
+        // Validate required fields
+        if (!name || !email || !phone || !tour_date) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields'
             });
         }
 
-        const query = `
-            INSERT INTO bookings 
-            (name, email, phone, tour_destination, tour_date, departure, adults, children, infants, special_requests) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+        // NEW: Get package details if package_id is provided
+        let finalDestination = tour_destination;
+        let finalPackageId = package_id || null;
 
-        const [result] = await pool.execute(query, [
-            name,
-            email,
-            phone,
-            tour_destination,
-            tour_date,
-            departure || null,
-            adults || 0,
-            children || 0,
-            infants || 0,
-            special_requests || null
-        ]);
-
-        // Send WhatsApp confirmation if phone exists
-        const [users] = await pool.execute(
-            'SELECT phone FROM users WHERE email = ?',
-            [email]
-        );
-        if (users[0]?.phone) {
-            await whatsappService.sendBookingConfirmation(
-                { id: result.insertId, name, email, phone }, 
-                users[0].phone
+        if (package_id) {
+            const [packages] = await pool.query(
+                'SELECT id, title, price FROM packages WHERE id = ?',
+                [package_id]
             );
+            
+            if (packages.length > 0) {
+                finalDestination = packages[0].title;
+                finalPackageId = packages[0].id;
+            }
         }
+
+        // Insert booking with package_id
+        const [result] = await pool.execute(
+            `INSERT INTO bookings 
+            (name, email, phone, tour_destination, package_id, tour_date, special_requests, amount, booking_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [name, email, phone, finalDestination, finalPackageId, tour_date, special_requests || null, amount || 0]
+        );
 
         res.status(201).json({
             success: true,
@@ -75,8 +68,11 @@ router.post('/', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Create booking error:', error);
-        res.status(500).json({ success: false, error: 'Internal server error' });
+        console.error('Booking creation error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create booking'
+        });
     }
 });
 
