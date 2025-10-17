@@ -15,7 +15,7 @@ const Navbar = () => {
           <li><Link to="/about" className={location.pathname === "/about" ? "active" : ""}>About</Link></li>
           <li><Link to="/destinations" className={location.pathname === "/destinations" ? "active" : ""}>Destinations</Link></li>
           <li><Link to="/booking" className={location.pathname === "/booking" ? "active" : ""}>Book Tour</Link></li>
-          <li><a href="#reviews">Reviews</a></li>
+          <li><Link to="/reviews">Reviews</Link></li>
           <li><a href="#contact">Contact</a></li>
           <li><Link to="/login" className={location.pathname === "/login" ? "active" : ""}>Login</Link></li>
           <li><Link to="/register" className={location.pathname === "/register" ? "active" : ""}>Register</Link></li>

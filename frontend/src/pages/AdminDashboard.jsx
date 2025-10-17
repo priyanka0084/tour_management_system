@@ -7,7 +7,8 @@ import BookingManager from '../components/admin/BookingManager';
 import UserManager from '../components/admin/UserManager';
 import config from '../config';
 import '../styles/adminDashboard.css';
-
+import ReviewManager from '../components/admin/ReviewManager';
+import '../styles/adminReviews.css';
 const AdminDashboard = ({ user }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
@@ -110,6 +111,13 @@ const AdminDashboard = ({ user }) => {
             <span className="icon">📋</span>
             <span>Bookings</span>
           </button>
+          <button 
+  className={activeTab === 'reviews' ? 'active' : ''}
+  onClick={() => setActiveTab('reviews')}
+>
+  <span className="icon">⭐</span>
+  <span>Reviews</span>
+</button>
         </nav>
 
         <button className="logout-btn" onClick={handleLogout}>
@@ -191,6 +199,8 @@ const AdminDashboard = ({ user }) => {
 
           {/* Bookings Tab */}
           {activeTab === 'bookings' && <BookingManager />}
+          // Add this AFTER the bookings tab section
+{activeTab === 'reviews' && <ReviewManager />}
           {/* Reports Tab */}
 {activeTab === 'reports' && <ReportsManager />}
         </div>

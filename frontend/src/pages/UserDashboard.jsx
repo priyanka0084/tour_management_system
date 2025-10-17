@@ -15,14 +15,16 @@ import CartCard from '../components/dashboard/CartCard';
 import StatsCard from '../components/dashboard/StatsCard';
 import BookingCard from '../components/dashboard/BookingCard';
 import WishlistCard from '../components/dashboard/WishlistCard';
-import ReviewCard from '../components/dashboard/ReviewCard';
 import NotificationPanel from '../components/dashboard/NotificationPanel';
 import ProfileEditor from '../components/dashboard/ProfileEditor';
 import { useWishlist } from '../context/WishlistContext';
 // Import styles
 import RecommendationsWidget from '../components/dashboard/RecommendationsWidget';
 import '../styles/UserDashboard.css';
-
+// Add to existing imports
+import WriteReviewModal from '../components/reviews/WriteReviewModal';
+import ReviewCard from '../components/reviews/ReviewCard';
+import { MessageSquare, PenSquare } from 'lucide-react'; // Add to existing lucide imports
 const UserDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -46,6 +48,11 @@ const UserDashboard = () => {
   const [editProfile, setEditProfile] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Add after existing state declarations
+const [myReviews, setMyReviews] = useState([]);
+const [completedBookings, setCompletedBookings] = useState([]);
+const [showWriteReviewModal, setShowWriteReviewModal] = useState(false);
+const [selectedBookingForReview, setSelectedBookingForReview] = useState(null);
   useEffect(() => {
   console.log('🛒 Cart Items State:', cartItems);
   console.log('🛒 Cart Count State:', cartCount);
@@ -63,16 +70,22 @@ useEffect(() => {
     wishlistCount: wishlistCount
   }));
 }, [cartCount, wishlistCount]);
+// Add after existing useEffect hooks
+useEffect(() => {
+  if (activeTab === 'reviews') {
+    fetchCompletedBookings();
+  }
+}, [activeTab]);
   // FIND THIS FUNCTION IN UserDashboard.jsx (around line 50-75)
 // REPLACE the fetchDashboardData function with this fixed version:
+// Find the existing fetchDashboardData function and update it
 const fetchDashboardData = async () => {
   try {
     setLoading(true);
-    
-    // Fetch data - some endpoints might not exist yet, so we handle failures gracefully
+
     const results = await Promise.allSettled([
       api.get('/user/bookings'),
-      api.get('/user/reviews'),
+      api.get('/reviews/user/my-reviews'), // ✨ ADD THIS LINE
       api.get('/user/stats')
     ]);
 
@@ -87,31 +100,22 @@ const fetchDashboardData = async () => {
       setBookings([]);
     }
 
-    // Set reviews
+    // ✨ ADD THIS BLOCK - Set reviews
     if (reviewsRes.status === 'fulfilled') {
-      setReviews(reviewsRes.value.data.reviews || []);
+      setMyReviews(reviewsRes.value.data.reviews || []);
     } else {
       console.warn('Failed to fetch reviews');
-      setReviews([]);
+      setMyReviews([]);
     }
 
-    // Set stats - KEEP cart and wishlist from context
+    // Set stats
     if (statsRes.status === 'fulfilled') {
       setStats({
         totalBookings: statsRes.value.data.stats?.totalBookings || 0,
         placesVisited: statsRes.value.data.stats?.placesVisited || 0,
-        cartCount: cartCount, // From CartContext
-        wishlistCount: wishlistCount, // From WishlistContext - will be updated by useEffect
-        reviewsCount: statsRes.value.data.stats?.reviewsCount || 0
-      });
-    } else {
-      console.warn('Failed to fetch stats');
-      setStats({
-        totalBookings: 0,
-        placesVisited: 0,
         cartCount: cartCount,
         wishlistCount: wishlistCount,
-        reviewsCount: 0
+        reviewsCount: reviewsRes.status === 'fulfilled' ? (reviewsRes.value.data.reviews?.length || 0) : 0 // ✨ ADD THIS
       });
     }
 
@@ -121,7 +125,28 @@ const fetchDashboardData = async () => {
     setLoading(false);
   }
 };
+// Add after fetchDashboardData function
+const fetchMyReviews = async () => {
+  try {
+    const response = await api.get('/reviews/user/my-reviews');
+    if (response.data.success) {
+      setMyReviews(response.data.reviews || []);
+    }
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+  }
+};
 
+const fetchCompletedBookings = async () => {
+  try {
+    const response = await api.get('/reviews/user/bookings-for-review');
+    if (response.data.success) {
+      setCompletedBookings(response.data.bookings || []);
+    }
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+  }
+};
 
   const handleClearCart = async () => {
     if (window.confirm('Are you sure you want to clear your entire cart?')) {
@@ -148,7 +173,33 @@ const fetchDashboardData = async () => {
       toast.error('Failed to update profile');
     }
   };
+  // Add after handleProfileUpdate function
+const handleWriteReview = (booking) => {
+  setSelectedBookingForReview(booking);
+  setShowWriteReviewModal(true);
+};
 
+const handleReviewSuccess = () => {
+  fetchMyReviews();
+  fetchCompletedBookings();
+  setShowWriteReviewModal(false);
+  setSelectedBookingForReview(null);
+  toast.success('Review submitted successfully!');
+};
+
+const handleDeleteReview = async (reviewId) => {
+  if (!window.confirm('Are you sure you want to delete this review?')) return;
+
+  try {
+    await api.delete(`/reviews/${reviewId}`);
+    toast.success('Review deleted successfully');
+    fetchMyReviews();
+    fetchCompletedBookings();
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    toast.error('Failed to delete review');
+  }
+};
   const handleImageUpload = async (file) => {
     try {
       const formData = new FormData();
@@ -474,7 +525,115 @@ const handleBookNow = (item) => {
       )}
     </div>
   );
+  // Add after renderBookings() function
+const renderReviews = () => (
+  <div className="space-y-6">
+    {/* Write Review CTA */}
+    {completedBookings.length > 0 && (
+      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl p-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-yellow-100 rounded-xl">
+              <PenSquare className="w-8 h-8 text-yellow-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-gray-900">Share Your Experience</h3>
+              <p className="text-gray-600">
+                You have {completedBookings.length} completed{' '}
+                {completedBookings.length === 1 ? 'trip' : 'trips'} to review
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (completedBookings.length === 1) {
+                handleWriteReview(completedBookings[0]);
+              } else {
+                // Show list of bookings to choose from
+                document.getElementById('bookings-to-review')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all"
+          >
+            Write a Review
+          </button>
+        </div>
+      </div>
+    )}
 
+    {/* My Reviews */}
+    <div className="bg-white rounded-2xl shadow-lg p-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <Star className="w-6 h-6 text-yellow-500" fill="currentColor" />
+        My Reviews ({myReviews.length})
+      </h3>
+
+      {myReviews.length === 0 ? (
+        <div className="text-center py-12">
+          <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={1.5} />
+          <p className="text-gray-500 text-lg">You haven't written any reviews yet</p>
+          <p className="text-gray-400 mt-2">Share your travel experiences with others!</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {myReviews.map((review) => (
+            <ReviewCard
+              key={review.id}
+              review={review}
+              isOwn={true}
+              onRefresh={fetchMyReviews}
+              showActions={true}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+
+    {/* Bookings to Review */}
+    {completedBookings.length > 0 && (
+      <div id="bookings-to-review" className="bg-white rounded-2xl shadow-lg p-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <Calendar className="w-6 h-6 text-teal-600" />
+          Trips to Review ({completedBookings.length})
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {completedBookings.map((booking) => (
+            <div
+              key={booking.id}
+              className="border-2 border-gray-200 rounded-xl p-4 hover:border-yellow-400 hover:shadow-md transition-all"
+            >
+              <div className="flex gap-4">
+                {booking.place_image && (
+                  <img
+                    src={booking.place_image}
+                    alt={booking.place_name}
+                    className="w-20 h-20 object-cover rounded-lg"
+                  />
+                )}
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900">{booking.package_name}</h4>
+                  <p className="text-sm text-gray-600">
+                    {booking.place_name}, {booking.country_name}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Traveled: {new Date(booking.tour_date).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleWriteReview(booking)}
+                className="w-full mt-3 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+              >
+                Write Review
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+);
   const renderWishlist = () => (
   <div className="space-y-6">
     {/* Header */}
@@ -570,34 +729,7 @@ const handleBookNow = (item) => {
   </div>
 );
 
-  const renderReviews = () => (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-        <Star className="w-6 h-6 text-yellow-600" />
-        My Reviews
-      </h3>
-      
-      {reviews.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="p-4 bg-yellow-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-            <Star className="w-10 h-10 text-yellow-400" />
-          </div>
-          <h4 className="text-lg font-semibold text-gray-700 mb-2">No reviews yet</h4>
-          <p className="text-gray-500 mb-4">Share your travel experiences!</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reviews.map((review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              onEdit={(review) => toast.info('Edit review - Coming soon!')}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  
 
   const renderProfile = () => (
     <ProfileEditor
@@ -874,35 +1006,9 @@ const handleBookNow = (item) => {
           )}
         </div>
       )}
+      {activeTab === 'reviews' && renderReviews()}
       {activeTab === 'cart' && renderCart()}
       {activeTab === 'wishlist' && renderWishlist()}
-      {activeTab === 'reviews' && (
-        <div className="content-card">
-          <h3 className="content-card-title">
-            <Star className="icon" />
-            My Reviews
-          </h3>
-          {reviews.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon icon-yellow">
-                <Star className="icon" />
-              </div>
-              <h4 className="empty-state-title">No reviews yet</h4>
-              <p className="empty-state-text">Share your travel experiences!</p>
-            </div>
-          ) : (
-            <div className="reviews-grid">
-              {reviews.map((review) => (
-                <ReviewCard
-                  key={review.id}
-                  review={review}
-                  onEdit={() => toast.info('Edit review - Coming soon!')}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {activeTab === 'profile' && (
         <ProfileEditor
@@ -976,7 +1082,16 @@ const handleBookNow = (item) => {
       onDelete={handleDeleteNotification}
       onNotificationClick={handleNotificationClick}
     />
-    
+    {showWriteReviewModal && selectedBookingForReview && (
+  <WriteReviewModal
+    booking={selectedBookingForReview}
+    onClose={() => {
+      setShowWriteReviewModal(false);
+      setSelectedBookingForReview(null);
+    }}
+    onSuccess={handleReviewSuccess}
+  />
+)}
   </div>
 );
 };

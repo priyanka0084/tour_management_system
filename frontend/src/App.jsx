@@ -17,6 +17,7 @@ import { CartProvider } from './context/CartContext'; // ✨ NEW IMPORT
 import FloatingChatbot from './components/home/FloatingChatbot';
 import { WishlistProvider } from './context/WishlistContext';
 import { ToastContainer } from 'react-toastify'; // ✨ NEW IMPORT
+import ReviewsPage from './pages/ReviewsPage';
 import 'react-toastify/dist/ReactToastify.css'; // ✨ NEW IMPORT
 import './App.css';
 import './styles/cart-wishlist-fix.css';
@@ -88,7 +89,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
+      <Route path="/reviews" element={<ReviewsPage />} />
       {/* 404 - Redirect to Home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -102,6 +102,8 @@ import userDashboardRoutes from './routes/userDashboard.js';
 import whatsappRoutes from './routes/whatsapp.js';
 import recommendationsRoutes from './routes/recommendations.js';
 import wishlistRoutes from './routes/wishlist.js';
+import reviewsRoutes from './routes/reviews.js';
+import adminReviewsRoutes from './routes/admin/reviews.js';
 // Register ALL routes ONCE (order matters!)
 app.use('/api/auth', authRoutes);
 app.use('/api/bookingpayment', bookingLimiter, bookingRoutes);
@@ -123,6 +125,8 @@ app.use('/api/user', userDashboardRoutes);
 // Cart routes (NEW) - Add this line
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/admin/reviews', adminReviewsRoutes);
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
