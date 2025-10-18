@@ -98,34 +98,35 @@ const ReviewsPage = () => {
         </div>
 
         {/* Write Review CTA */}
-        {user && completedBookings.length > 0 && (
-          <div className="write-review-cta">
-            <div className="cta-content">
-              <div className="cta-icon">
-                <PenSquare size={32} />
-              </div>
-              <div className="cta-text">
-                <h3>Share Your Experience</h3>
-                <p>
-                  You have {completedBookings.length} completed{' '}
-                  {completedBookings.length === 1 ? 'trip' : 'trips'} to review
-                </p>
-              </div>
-            </div>
-            <button
-              className="cta-button"
-              onClick={() => {
-                if (completedBookings.length === 1) {
-                  handleWriteReview(completedBookings[0]);
-                } else {
-                  navigate('/userdashboard?tab=reviews');
-                }
-              }}
-            >
-              Write a Review
-            </button>
-          </div>
-        )}
+        {/* Write Review CTA */}
+{user && completedBookings.length > 0 && (
+  <div className="write-review-cta">
+    <div className="cta-content">
+      <div className="cta-icon">
+        <PenSquare size={32} />
+      </div>
+      <div className="cta-text">
+        <h3>Share Your Experience</h3>
+        <p>
+          You have {completedBookings.length} booking{' '}
+          {completedBookings.length === 1 ? '' : 's'} ready to review
+        </p>
+      </div>
+    </div>
+    <button
+      className="cta-button"
+      onClick={() => {
+        if (completedBookings.length === 1) {
+          handleWriteReview(completedBookings[0]);
+        } else {
+          navigate('/userdashboard?tab=reviews');
+        }
+      }}
+    >
+      Write a Review
+    </button>
+  </div>
+)}
 
         {/* Main Content */}
         <div className="reviews-page-content">

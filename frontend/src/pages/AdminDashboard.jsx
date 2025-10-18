@@ -199,7 +199,6 @@ const AdminDashboard = ({ user }) => {
 
           {/* Bookings Tab */}
           {activeTab === 'bookings' && <BookingManager />}
-          // Add this AFTER the bookings tab section
 {activeTab === 'reviews' && <ReviewManager />}
           {/* Reports Tab */}
 {activeTab === 'reports' && <ReportsManager />}

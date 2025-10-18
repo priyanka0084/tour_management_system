@@ -520,7 +520,6 @@ router.get('/user/bookings-for-review', authMiddleware, async (req, res) => {
             LEFT JOIN places p ON pkg.place_id = p.id
             LEFT JOIN countries c ON p.country_id = c.id
             WHERE b.user_id = ? 
-            AND b.tour_date < CURDATE()
             AND r.id IS NULL
             AND b.payment_status = 'success'
             ORDER BY b.tour_date DESC

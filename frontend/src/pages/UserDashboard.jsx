@@ -539,8 +539,7 @@ const renderReviews = () => (
             <div>
               <h3 className="font-bold text-lg text-gray-900">Share Your Experience</h3>
               <p className="text-gray-600">
-                You have {completedBookings.length} completed{' '}
-                {completedBookings.length === 1 ? 'trip' : 'trips'} to review
+                You have {completedBookings.length} booking{completedBookings.length === 1 ? '' : 's'} ready to review
               </p>
             </div>
           </div>
@@ -594,7 +593,7 @@ const renderReviews = () => (
       <div id="bookings-to-review" className="bg-white rounded-2xl shadow-lg p-6">
         <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <Calendar className="w-6 h-6 text-teal-600" />
-          Trips to Review ({completedBookings.length})
+          Bookings to Review ({completedBookings.length})
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -617,7 +616,7 @@ const renderReviews = () => (
                     {booking.place_name}, {booking.country_name}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Traveled: {new Date(booking.tour_date).toLocaleDateString()}
+                    Booked: {new Date(booking.tour_date).toLocaleDateString()}
                   </p>
                 </div>
               </div>
