@@ -21,6 +21,7 @@ import ReviewsPage from './pages/ReviewsPage';
 import 'react-toastify/dist/ReactToastify.css'; // ✨ NEW IMPORT
 import './App.css';
 import './styles/cart-wishlist-fix.css';
+
 import { RecommendationProvider } from './context/RecommendationContext';
 import RecommendationsPage from './pages/RecommendationsPage';
 // Protected Route Component

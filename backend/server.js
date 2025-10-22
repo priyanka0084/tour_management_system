@@ -104,6 +104,7 @@ import recommendationsRoutes from './routes/recommendations.js';
 import wishlistRoutes from './routes/wishlist.js';
 import reviewsRoutes from './routes/reviews.js';
 import adminReviewsRoutes from './routes/admin/reviews.js';
+
 // Register ALL routes ONCE (order matters!)
 app.use('/api/auth', authRoutes);
 app.use('/api/bookingpayment', bookingLimiter, bookingRoutes);

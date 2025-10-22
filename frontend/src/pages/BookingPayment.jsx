@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "../styles/BookingPayment.css";
 import DestinationSearch from "../components/DestinationSearch";
 import config from '../config';
-
+import Navbar from "../components/common/Navbar";
 const PRICE_PER_PASSENGER = 100;
 
 const BookingPayment = () => {
@@ -430,6 +430,7 @@ useEffect(() => {
   // ---------------- Render ----------------
   return (
     <div className="booking-page">
+      <Navbar />
       <header className="header">
         <div className="header-content">
           <h1 className="site-title">Dream Tours</h1>

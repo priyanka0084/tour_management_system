@@ -89,7 +89,7 @@ router.get('/', async (req, res) => {
                 r.helpful_count,
                 r.created_at,
                 r.verified_purchase,
-                u.full_name as user_name,
+                u.name as user_name,
                 u.profile_picture as user_image,
                 p.name as place_name,
                 p.image_url as place_image,
@@ -146,7 +146,7 @@ router.get('/', async (req, res) => {
         query += ' LIMIT ? OFFSET ?';
         params.push(parseInt(limit), parseInt(offset));
 
-        const [rows] = await pool.execute(query, params);
+        const [rows] = await pool.execute(query, [parseInt(limit), parseInt(offset)]);
 
         // Process images - convert comma-separated string to array
         const reviews = rows.map(review => ({
@@ -184,7 +184,7 @@ router.get('/place/:placeId', async (req, res) => {
                 r.helpful_count,
                 r.created_at,
                 r.verified_purchase,
-                u.full_name as user_name,
+                u.name as user_name,
                 u.profile_picture as user_image,
                 (SELECT GROUP_CONCAT(image_url) 
                  FROM review_images 
@@ -250,7 +250,7 @@ router.get('/:id', async (req, res) => {
         const query = `
             SELECT 
                 r.*,
-                u.full_name as user_name,
+                u.name as user_name,
                 u.profile_picture as user_image,
                 p.name as place_name,
                 p.image_url as place_image,

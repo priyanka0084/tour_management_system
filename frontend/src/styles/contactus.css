@@ -1,0 +1,341 @@
+:root {
+  --teal: #0d9488;
+  --blue: #2563eb;
+  --purple: #7e22ce;
+  --orange: #ea580c;
+  --light: #f9fafb;
+  --gray: #4b5563;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.contact-page {
+  background: var(--light);
+}
+
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(to right, var(--teal), var(--blue));
+  color: white;
+  text-align: center;
+  padding: 20px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  max-height: 150px;
+}
+.hero-section h1 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+.hero-section p {
+  max-width: 600px;
+  margin: 0 auto;
+  font-size: 1rem;
+  line-height: 1.5;
+  /* ✅ modern line clamp (optional if you want to clamp hero text) */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Contact Info */
+.info-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  max-width: 1100px;
+  margin: 20px auto 60px;
+  padding: 0 20px;
+}
+.info-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.3s;
+}
+.info-card:hover {
+  transform: translateY(-5px);
+}
+.icon-box {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+}
+.icon-box svg {
+  width: 28px;
+  height: 28px;
+}
+.teal { background: #ccfbf1; color: var(--teal); }
+.blue { background: #dbeafe; color: var(--blue); }
+.purple { background: #ede9fe; color: var(--purple); }
+.orange { background: #ffedd5; color: var(--orange); }
+
+/* Form & FAQ */
+.form-faq-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  max-width: 1100px;
+  margin: 0 auto 60px;
+  padding: 0 20px;
+}
+@media(max-width: 900px) {
+  .form-faq-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-container,
+.faq-container {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.form-container h2,
+.faq-container h2 {
+  margin-bottom: 20px;
+}
+.form-fields label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.form-fields input,
+.form-fields textarea,
+.form-fields select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+.form-fields input:focus,
+.form-fields textarea:focus,
+.form-fields select:focus {
+  border-color: var(--teal);
+  outline: none;
+}
+.form-fields button {
+  background: var(--teal);
+  color: white;
+  border: none;
+  padding: 12px;
+  width: 100%;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+.form-fields button:hover {
+  background: #0f766e;
+}
+.error-text {
+  color: red;
+  font-size: 0.85rem;
+}
+
+/* Submitted box */
+.submitted-box {
+  text-align: center;
+}
+.success-icon {
+  background: #dcfce7;
+  color: #16a34a;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+.submitted-box button {
+  background: none;
+  color: var(--teal);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* FAQ */
+.faq-item {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 10px;
+}
+.faq-question {
+  width: 100%;
+  background: #f9fafb;
+  border: none;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  cursor: pointer;
+}
+.faq-answer {
+  padding: 14px 16px;
+  background: white;
+  color: var(--gray);
+}
+.faq-icon {
+  transition: transform 0.3s;
+}
+.faq-icon.rotate {
+  transform: rotate(180deg);
+}
+
+/* Support buttons */
+.extra-support {
+  margin-top: 20px;
+  background: linear-gradient(to right, #f0fdfa, #eff6ff);
+  padding: 16px;
+  border-radius: 8px;
+}
+.support-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.support-buttons button {
+  background: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--teal);
+  transition: box-shadow 0.3s;
+}
+.support-buttons button:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Map Section */
+.map-section {
+  text-align: center;
+  margin-bottom: 60px;
+}
+.map-box {
+  max-width: 1100px;
+  height: 400px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Social */
+.social-section {
+  text-align: center;
+  padding: 20px;
+}
+.social-section p {
+  color: var(--gray);
+}
+.social-icons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.social-icons a {
+  display: inline-flex;
+  background: var(--teal);
+  color: white;
+  padding: 10px;
+  border-radius: 50%;
+  transition: transform 0.3s, background 0.3s;
+}
+.social-icons a:hover {
+  background: #0f766e;
+  transform: translateY(-3px);
+}
+/* 📞 Call Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-box {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  position: relative;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-box h2 {
+  margin-bottom: 0.5rem;
+  color: #1e40af;
+}
+
+.modal-box p {
+  margin-bottom: 1.5rem;
+  color: #555;
+}
+
+.call-btn {
+  display: inline-block;
+  padding: 0.8rem 1.5rem;
+  background: #2563eb;
+  color: white;
+  border-radius: 8px;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background 0.3s ease;
+}
+
+.call-btn:hover {
+  background: #1d4ed8;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #555;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}

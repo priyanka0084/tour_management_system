@@ -211,21 +211,21 @@
 
 /* Why Choose Us Section */
 .why-choose-us {
-  background: #fff0f6;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 40px 20px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(255, 105, 135, 0.2);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
   max-width: 900px;
   margin: 0 auto 60px auto;
 }
 
 .why-choose-us .section-title {
-  color: #ff4d6d;
+  color:black;
   font-size: 2.4rem;
   margin-bottom: 30px;
   text-align: center;
   font-weight: 800;
-  text-shadow: 0 0 8px rgba(255, 77, 109, 0.6);
+  
 }
 
 .card-container {
@@ -236,9 +236,9 @@
 }
 
 .info-card {
-  background: white;
+  background: linear-gradient(135deg, #667eea 0%,#fff0f6 100%); /* Beautiful purple gradient */
   border-radius: 14px;
-  box-shadow: 0 6px 18px rgba(255, 77, 109, 0.15);
+  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.25);
   padding: 25px 20px;
   flex: 1 1 250px;
   max-width: 280px;
@@ -254,23 +254,23 @@
 .info-card h3 {
   font-size: 1.3rem;
   margin-bottom: 12px;
-  color: #ff4d6d;
+  color: #ffffff; /* Changed from #ff4d6d to white */
   font-weight: 700;
-  text-shadow: 0 0 6px rgba(255, 77, 109, 0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
 }
 
 .info-card p {
-  font-size: 1rem;
-  color: #555;
-  line-height: 1.5;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.95); /* White with slight transparency */
+  line-height: 1.6;
 }
 
 /* Testimonials Section */
 .testimonials {
-  background: #fff0f6;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 40px 20px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(255, 105, 135, 0.2);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
   max-width: 900px;
   margin: 0 auto 60px auto;
   overflow: hidden;
@@ -278,12 +278,12 @@
 }
 
 .testimonials .section-title {
-  color: #ff4d6d;
+  color: black;
   font-size: 2.4rem;
   margin-bottom: 30px;
   text-align: center;
   font-weight: 800;
-  text-shadow: 0 0 8px rgba(255, 77, 109, 0.6);
+  
 }
 
 .carousel-container {
@@ -328,7 +328,7 @@
 .testimonial-card h4 {
   font-weight: 700;
   font-style: normal;
-  color: #ff4d6d;
+  color: black;
   text-align: right;
   margin: 0;
   text-shadow: 0 0 6px rgba(255, 77, 109, 0.5);

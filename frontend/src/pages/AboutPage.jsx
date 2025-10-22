@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-
+import Navbar from "../components/common/Navbar";
 const primaryColor = '#ff6b6b';
 
 const HoverCard = ({ style, children }) => {
@@ -301,8 +301,10 @@ const aboutAccentStyle = {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
+        
         <div style={headerWrapStyle}>
           <div style={heroStyle}>
+            <Navbar />
             <div style={aboutBannerWrapStyle}>
   <h1 style={aboutBannerTextStyle}>About Us</h1>
   <div style={aboutAccentStyle} />
