@@ -4,7 +4,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import config from '../../config';
-
+// Add this import at the top with other imports
+import TopCustomersCard from './TopCustomersCard';
 const ReportsManager = () => {
   const [activeSection, setActiveSection] = useState('summary');
   const [loading, setLoading] = useState(false);
@@ -453,11 +454,12 @@ const ReportsManager = () => {
 
   // Format currency
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0
-    }).format(amount || 0);
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
   };
 
   // Render sections
@@ -614,7 +616,10 @@ const ReportsManager = () => {
             </div>
           </div>
         )}
-
+        <TopCustomersCard 
+      customers={topCustomers} 
+      loading={loading} 
+    />
         {/* Package Analytics Section */}
         {activeSection === 'packages' && (
           <div className="report-section">

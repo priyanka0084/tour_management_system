@@ -41,17 +41,17 @@ const ReviewsList = ({
       setError(null);
 
       const params = new URLSearchParams({
-        limit: pagination.limit,
-        offset: reset ? 0 : pagination.offset,
-        sort_by: filters.sort_by
-      });
+  limit: pagination.limit,
+  offset: reset ? 0 : pagination.offset,
+  sort_by: filters.sort_by,
+  status: 'approved'  // ✨ ADD THIS LINE - only show approved reviews
+});
 
       // Add filters
       if (placeId) params.append('place_id', placeId);
-      if (packageId) params.append('package_id', packageId);
-      if (filters.rating !== 'all') params.append('rating', filters.rating);
-      if (filters.destination !== 'all') params.append('place_id', filters.destination);
-
+if (packageId) params.append('package_id', packageId);
+if (filters.rating !== 'all') params.append('rating', filters.rating);
+if (filters.destination !== 'all') params.append('place_id', filters.destination);
       const endpoint = placeId 
         ? `/reviews/place/${placeId}`
         : '/reviews';
