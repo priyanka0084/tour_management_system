@@ -1,323 +1,422 @@
-// backend/routes/reviews.js
+// ========================================
+// ADMIN REVIEWS ROUTES - COMPLETELY FIXED
+// Endpoints for managing all reviews
+// ========================================
 
 import express from 'express';
 import { pool } from '../../db.js';
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { authMiddleware, adminMiddleware } from '../../middleware/auth.js';
 
 const router = express.Router();
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/reviews/');
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'review-' + uniqueSuffix + path.extname(file.originalname));
-  }
+// Apply auth + admin middleware to all routes
+router.use(authMiddleware, adminMiddleware);
+
+// ========================================
+// GET /api/admin/reviews/stats - Get review statistics
+// ========================================
+router.get('/stats', async (req, res) => {
+    try {
+        const statsQuery = `
+            SELECT 
+                COUNT(*) as total_reviews,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_reviews,
+                SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved_reviews,
+                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_reviews,
+                AVG(CASE WHEN status = 'approved' THEN rating ELSE NULL END) as average_rating,
+                SUM(CASE WHEN report_count > 0 THEN 1 ELSE 0 END) as reported_reviews
+            FROM reviews
+        `;
+
+        const [stats] = await pool.execute(statsQuery);
+
+        res.json({
+            success: true,
+            stats: stats[0]
+        });
+
+    } catch (error) {
+        console.error('Get review stats error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch stats' 
+        });
+    }
 });
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (extname && mimetype) {
-      return cb(null, true);
-    }
-    cb(new Error('Only image files are allowed'));
-  }
-});
-
-// ============================================
-// GET /api/reviews/user/bookings-for-review
-// Get completed bookings without reviews for logged-in user
-// ============================================
-router.get('/user/bookings-for-review', async (req, res) => {
-  try {
-    const userId = req.user?.id; // From auth middleware
-
-    if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      });
-    }
-
-    const query = `
-      SELECT 
-        b.id,
-        b.tour_destination as package_name,
-        b.tour_date,
-        b.booking_date,
-        b.place_id,
-        b.package_id,
-        p.name as place_name,
-        p.image_url as place_image,
-        c.name as country_name
-      FROM bookings b
-      LEFT JOIN places p ON b.place_id = p.id
-      LEFT JOIN countries c ON p.country_id = c.id
-      LEFT JOIN reviews r ON b.id = r.booking_id
-      WHERE b.user_id = ?
-        AND b.booking_status = 'completed'
-        AND b.payment_status IN ('success', 'confirmed')
-        AND r.id IS NULL
-      ORDER BY b.tour_date DESC
-    `;
-
-    const [bookings] = await pool.execute(query, [userId]);
-
-    res.json({
-      success: true,
-      bookings: bookings
-    });
-
-  } catch (error) {
-    console.error('Get bookings for review error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch bookings' 
-    });
-  }
-});
-
-// ============================================
-// GET /api/reviews/user/my-reviews
-// Get all reviews by logged-in user
-// ============================================
-router.get('/user/my-reviews', async (req, res) => {
-  try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      });
-    }
-
-    const query = `
-      SELECT 
-        r.*,
-        p.name as place_name,
-        p.image_url as place_image,
-        c.name as country_name,
-        u.full_name as user_name
-      FROM reviews r
-      LEFT JOIN places p ON r.place_id = p.id
-      LEFT JOIN countries c ON p.country_id = c.id
-      LEFT JOIN users u ON r.user_id = u.id
-      WHERE r.user_id = ?
-      ORDER BY r.created_at DESC
-    `;
-
-    const [reviews] = await pool.execute(query, [userId]);
-
-    res.json({
-      success: true,
-      reviews: reviews
-    });
-
-  } catch (error) {
-    console.error('Get user reviews error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch reviews' 
-    });
-  }
-});
-
-// ============================================
-// POST /api/reviews
-// Create a new review
-// ============================================
-router.post('/', upload.array('images', 5), async (req, res) => {
-  try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      });
-    }
-
-    const {
-      booking_id,
-      place_id,
-      package_id,
-      rating,
-      title,
-      review_text
-    } = req.body;
-
-    // Validate required fields
-    if (!booking_id || !place_id || !rating || !title || !review_text) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields'
-      });
-    }
-
-    // Check if review already exists for this booking
-    const [existingReview] = await pool.execute(
-      'SELECT id FROM reviews WHERE booking_id = ?',
-      [booking_id]
-    );
-
-    if (existingReview.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Review already exists for this booking'
-      });
-    }
-
-    // Insert review
-    const [result] = await pool.execute(
-      `INSERT INTO reviews 
-      (booking_id, user_id, place_id, package_id, rating, title, review_text, status, verified_purchase, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 1, NOW())`,
-      [booking_id, userId, place_id, package_id || null, rating, title, review_text]
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Review submitted successfully',
-      reviewId: result.insertId
-    });
-
-  } catch (error) {
-    console.error('Create review error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to submit review' 
-    });
-  }
-});
-
-// ============================================
-// GET /api/reviews
-// Get all approved reviews (public)
-// ============================================
+// ========================================
+// GET /api/admin/reviews - Get all reviews with filters
+// ========================================
 router.get('/', async (req, res) => {
-  try {
-    const { 
-      status = 'approved', 
-      rating, 
-      place_id, 
-      sort_by = 'recent',
-      limit = 10,
-      offset = 0
-    } = req.query;
+    try {
+        const { status, rating, sort_by, limit = 50 } = req.query;
 
-    let query = `
-      SELECT 
-        r.*,
-        p.name as place_name,
-        p.image_url as place_image,
-        c.name as country_name,
-        u.full_name as user_name
-      FROM reviews r
-      LEFT JOIN places p ON r.place_id = p.id
-      LEFT JOIN countries c ON p.country_id = c.id
-      LEFT JOIN users u ON r.user_id = u.id
-      WHERE r.status = ?
-    `;
+        let query = `
+            SELECT 
+                r.id,
+                r.booking_id,
+                r.user_id,
+                r.place_id,
+                r.package_id,
+                r.rating,
+                r.title,
+                r.review_text,
+                r.images,
+                r.status,
+                r.admin_response,
+                r.helpful_count,
+                r.report_count,
+                r.verified_purchase,
+                r.visit_date,
+                r.created_at,
+                r.updated_at,
+                u.name as user_name,
+                u.email as user_email,
+                p.name as place_name,
+                c.name as country_name
+            FROM reviews r
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN places p ON r.place_id = p.id
+            LEFT JOIN countries c ON p.country_id = c.id
+            WHERE 1=1
+        `;
 
-    const params = [status];
+        const params = [];
 
-    if (rating) {
-      query += ` AND r.rating >= ?`;
-      params.push(rating);
+        // Filter by status
+        if (status && status !== 'all') {
+            query += ' AND r.status = ?';
+            params.push(status);
+        }
+
+        // Filter by rating
+        if (rating && rating !== 'all') {
+            query += ' AND r.rating >= ?';
+            params.push(parseInt(rating));
+        }
+
+        // Sort
+        switch (sort_by) {
+            case 'oldest':
+                query += ' ORDER BY r.created_at ASC';
+                break;
+            case 'rating_high':
+                query += ' ORDER BY r.rating DESC, r.created_at DESC';
+                break;
+            case 'rating_low':
+                query += ' ORDER BY r.rating ASC, r.created_at DESC';
+                break;
+            case 'reported':
+                query += ' ORDER BY r.report_count DESC, r.created_at DESC';
+                break;
+            case 'recent':
+            default:
+                query += ' ORDER BY r.created_at DESC';
+        }
+
+        query += ' LIMIT ?';
+        params.push(parseInt(limit));
+
+        const [reviews] = await pool.execute(query, params);
+
+        // Parse images JSON
+        const reviewsWithImages = reviews.map(review => ({
+            ...review,
+            images: review.images ? JSON.parse(review.images) : []
+        }));
+
+        res.json({
+            success: true,
+            reviews: reviewsWithImages,
+            count: reviews.length
+        });
+
+    } catch (error) {
+        console.error('Get admin reviews error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch reviews' 
+        });
     }
-
-    if (place_id) {
-      query += ` AND r.place_id = ?`;
-      params.push(place_id);
-    }
-
-    // Sorting
-    if (sort_by === 'recent') {
-      query += ` ORDER BY r.created_at DESC`;
-    } else if (sort_by === 'rating_high') {
-      query += ` ORDER BY r.rating DESC, r.created_at DESC`;
-    } else if (sort_by === 'rating_low') {
-      query += ` ORDER BY r.rating ASC, r.created_at DESC`;
-    } else if (sort_by === 'helpful') {
-      query += ` ORDER BY r.helpful_count DESC, r.created_at DESC`;
-    }
-
-    query += ` LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit), parseInt(offset));
-
-    const [reviews] = await pool.execute(query, params);
-
-    res.json({
-      success: true,
-      reviews: reviews
-    });
-
-  } catch (error) {
-    console.error('Get reviews error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch reviews' 
-    });
-  }
 });
 
-// ============================================
-// DELETE /api/reviews/:id
-// Delete own review
-// ============================================
+// ========================================
+// GET /api/admin/reviews/:id - Get single review details
+// ========================================
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const query = `
+            SELECT 
+                r.*,
+                u.name as user_name,
+                u.email as user_email,
+                p.name as place_name,
+                c.name as country_name,
+                b.booking_date,
+                b.amount as total_amount,
+                b.payment_status as booking_status
+            FROM reviews r
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN places p ON r.place_id = p.id
+            LEFT JOIN countries c ON p.country_id = c.id
+            LEFT JOIN bookings b ON r.booking_id = b.id
+            WHERE r.id = ?
+        `;
+
+        const [reviews] = await pool.execute(query, [id]);
+
+        if (reviews.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Review not found'
+            });
+        }
+
+        const review = reviews[0];
+        review.images = review.images ? JSON.parse(review.images) : [];
+
+        res.json({
+            success: true,
+            review
+        });
+
+    } catch (error) {
+        console.error('Get review details error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch review details' 
+        });
+    }
+});
+
+// ========================================
+// PUT /api/admin/reviews/:id/approve - Approve a review
+// ========================================
+router.put('/:id/approve', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const updateQuery = `
+            UPDATE reviews 
+            SET status = 'approved',
+                updated_at = NOW()
+            WHERE id = ?
+        `;
+
+        const [result] = await pool.execute(updateQuery, [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Review not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Review approved successfully'
+        });
+
+    } catch (error) {
+        console.error('Approve review error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to approve review' 
+        });
+    }
+});
+
+// ========================================
+// PUT /api/admin/reviews/:id/reject - Reject a review
+// ========================================
+router.put('/:id/reject', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const updateQuery = `
+            UPDATE reviews 
+            SET status = 'rejected',
+                updated_at = NOW()
+            WHERE id = ?
+        `;
+
+        const [result] = await pool.execute(updateQuery, [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Review not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Review rejected'
+        });
+
+    } catch (error) {
+        console.error('Reject review error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to reject review' 
+        });
+    }
+});
+
+// ========================================
+// DELETE /api/admin/reviews/:id - Delete a review
+// ========================================
 router.delete('/:id', async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    const reviewId = req.params.id;
+    try {
+        const { id } = req.params;
 
-    if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      });
+        const deleteQuery = 'DELETE FROM reviews WHERE id = ?';
+        const [result] = await pool.execute(deleteQuery, [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Review not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Review deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete review error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to delete review' 
+        });
     }
+});
 
-    // Check if review belongs to user
-    const [review] = await pool.execute(
-      'SELECT id FROM reviews WHERE id = ? AND user_id = ?',
-      [reviewId, userId]
-    );
+// ========================================
+// POST /api/admin/reviews/bulk-approve - Bulk approve reviews
+// ========================================
+router.post('/bulk-approve', async (req, res) => {
+    try {
+        const { review_ids } = req.body;
 
-    if (review.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Review not found or unauthorized'
-      });
+        if (!Array.isArray(review_ids) || review_ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid review IDs'
+            });
+        }
+
+        const placeholders = review_ids.map(() => '?').join(',');
+        const updateQuery = `
+            UPDATE reviews 
+            SET status = 'approved',
+                updated_at = NOW()
+            WHERE id IN (${placeholders})
+        `;
+
+        const [result] = await pool.execute(updateQuery, review_ids);
+
+        res.json({
+            success: true,
+            message: `${result.affectedRows} reviews approved`,
+            affected_rows: result.affectedRows
+        });
+
+    } catch (error) {
+        console.error('Bulk approve error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to bulk approve reviews' 
+        });
     }
+});
 
-    await pool.execute('DELETE FROM reviews WHERE id = ?', [reviewId]);
+// ========================================
+// POST /api/admin/reviews/bulk-reject - Bulk reject reviews
+// ========================================
+router.post('/bulk-reject', async (req, res) => {
+    try {
+        const { review_ids } = req.body;
 
-    res.json({
-      success: true,
-      message: 'Review deleted successfully'
-    });
+        if (!Array.isArray(review_ids) || review_ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid review IDs'
+            });
+        }
 
-  } catch (error) {
-    console.error('Delete review error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to delete review' 
-    });
-  }
+        const placeholders = review_ids.map(() => '?').join(',');
+        const updateQuery = `
+            UPDATE reviews 
+            SET status = 'rejected',
+                updated_at = NOW()
+            WHERE id IN (${placeholders})
+        `;
+
+        const [result] = await pool.execute(updateQuery, review_ids);
+
+        res.json({
+            success: true,
+            message: `${result.affectedRows} reviews rejected`,
+            affected_rows: result.affectedRows
+        });
+
+    } catch (error) {
+        console.error('Bulk reject error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to bulk reject reviews' 
+        });
+    }
+});
+
+// ========================================
+// PUT /api/admin/reviews/:id/response - Add admin response
+// ========================================
+router.put('/:id/response', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { admin_response } = req.body;
+
+        if (!admin_response || admin_response.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                error: 'Admin response is required'
+            });
+        }
+
+        const updateQuery = `
+            UPDATE reviews 
+            SET admin_response = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        `;
+
+        const [result] = await pool.execute(updateQuery, [admin_response.trim(), id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Review not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Admin response added successfully'
+        });
+
+    } catch (error) {
+        console.error('Add admin response error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to add admin response' 
+        });
+    }
 });
 
 export default router;
