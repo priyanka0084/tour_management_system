@@ -258,7 +258,7 @@ const ReviewManager = () => {
             <Star size={32} fill="currentColor" />
           </div>
           <div className="stat-info">
-            <div className="stat-value">{stats.average_rating?.toFixed(1) || '0.0'}</div>
+            <div className="stat-value">{Number(stats.average_rating || 0).toFixed(1)}</div>
             <div className="stat-label">Avg Rating</div>
           </div>
         </div>

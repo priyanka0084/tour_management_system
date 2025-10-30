@@ -11,7 +11,7 @@ const PlaceRatingsSummary = ({ stats }) => {
   if (!stats) return null;
 
   const {
-    average_rating = 0,
+    average_rating:avgRating= 0,
     total_reviews = 0,
     stars_5 = 0,
     stars_4 = 0,
@@ -19,7 +19,7 @@ const PlaceRatingsSummary = ({ stats }) => {
     stars_2 = 0,
     stars_1 = 0
   } = stats;
-
+  const average_rating = Number(avgRating) || 0;
   // Calculate percentages for rating distribution
   const getRatingPercentage = (count) => {
     if (total_reviews === 0) return 0;
