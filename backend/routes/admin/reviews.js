@@ -8,7 +8,11 @@ import { pool } from '../../db.js';
 import { authMiddleware, adminMiddleware } from '../../middleware/auth.js';
 
 const router = express.Router();
-
+// Ensure proper integer conversion for MySQL
+const ensureInt = (value, defaultValue) => {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? defaultValue : parsed;
+};
 // Apply auth + admin middleware to all routes
 router.use(authMiddleware, adminMiddleware);
 
@@ -49,7 +53,8 @@ router.get('/stats', async (req, res) => {
 // ========================================
 router.get('/', async (req, res) => {
     try {
-        const { status, rating, sort_by, limit = 50 } = req.query;
+        const { status, rating, sort_by } = req.query;
+const limit = ensureInt(req.query.limit, 12);
 
         let query = `
             SELECT 

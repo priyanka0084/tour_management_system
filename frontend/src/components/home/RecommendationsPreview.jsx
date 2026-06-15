@@ -24,7 +24,7 @@ const RecommendationsPreview = () => {
       // If user is logged in and has preferences, get personalized recommendations
       if (user) {
         try {
-          const token = localStorage.getItem('token');
+          const token = localStorage.getItem('accessToken');
           const prefsResponse = await axios.get(
             `http://localhost:5000/api/recommendations/preferences/${user.id}`,
             { headers: { Authorization: `Bearer ${token}` } }

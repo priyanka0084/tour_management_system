@@ -60,7 +60,7 @@ export const WishlistProvider = ({ children }) => {
       console.log('💖 Adding place to wishlist:', place);
       
       const response = await api.post('/wishlist/add', {
-        place_id: place.id,
+        place_id: place.id || place.place_id,
         package_id: null,
         notes: null
       });
@@ -70,7 +70,8 @@ export const WishlistProvider = ({ children }) => {
       if (response.data.success) {
         toast.success(`❤️ ${place.name} added to wishlist!`, {
           position: 'top-right',
-          autoClose: 2000
+          autoClose: 2000,
+          toastId: `wishlist-add-${placeId}`
         });
 
         // Update wishlist count

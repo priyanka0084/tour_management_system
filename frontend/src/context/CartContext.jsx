@@ -61,7 +61,7 @@ export const CartProvider = ({ children }) => {
       console.log('🎯 Adding place to cart:', place);
       
       const response = await api.post('/cart/add', {
-        place_id: place.id,
+        place_id: place.id || place.place_id,  // ✅ THIS IS THE ONLY CHANGE
         package_id: null,
         quantity: 1
       });
@@ -70,16 +70,13 @@ export const CartProvider = ({ children }) => {
 
       if (response.data.success) {
         toast.success(`✅ ${place.name} added to cart!`, {
-          position: 'top-right',
-          autoClose: 2000
-        });
+  position: 'top-right',
+  autoClose: 2000,
+  toastId: `cart-add-${placeId}`  // ✅ prevents duplicate toasts
+});
 
-        // Update cart count
         setCartCount(response.data.cartCount || cartCount + 1);
-        
-        // Refresh full cart
         await fetchCart();
-
         return { success: true };
       }
     } catch (error) {
@@ -95,7 +92,8 @@ export const CartProvider = ({ children }) => {
 
       toast.error(error.response?.data?.error || 'Failed to add to cart', {
         position: 'top-right',
-        autoClose: 2000
+        autoClose: 2000,
+        toastId: `cart-error-${placeId}`
       });
       return { success: false };
     }

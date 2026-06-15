@@ -107,7 +107,16 @@ function App() {
             <div className="App">
               <AppRoutes />
               <FloatingChatbot />
-              <ToastContainer />
+              <ToastContainer
+  position="top-right"
+  autoClose={2000}
+  hideProgressBar={false}
+  newestOnTop={true}
+  closeOnClick={true}
+  pauseOnHover={true}
+  draggable={true}
+  theme="light"
+/>
             </div>
             </RecommendationProvider>
           </WishlistProvider>

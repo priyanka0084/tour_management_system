@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
+import api from '../services/api';
 
 // Create Context
 const RecommendationContext = createContext();
@@ -49,25 +50,23 @@ export const RecommendationProvider = ({ children }) => {
 
   // Load user's saved preferences
   const loadUserPreferences = async () => {
-    try {
-      setPreferencesLoading(true);
-      const token = localStorage.getItem('token');
-      
-      const response = await axios.get(
-        `http://localhost:5000/api/recommendations/preferences/${user.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  try {
+    setPreferencesLoading(true);
 
-      if (response.data.success && response.data.data) {
-        setUserPreferences(response.data.data);
-        setSelectedTags(response.data.data.selected_tags || []);
-      }
-    } catch (error) {
-      console.log('No saved preferences found');
-    } finally {
-      setPreferencesLoading(false);
+    const response = await api.get(
+      `/recommendations/preferences/${user.id}`
+    );
+
+    if (response.data.success && response.data.data) {
+      setUserPreferences(response.data.data);
+      setSelectedTags(response.data.data.selected_tags || []);
     }
-  };
+  } catch (error) {
+    console.log('No saved preferences found');
+  } finally {
+    setPreferencesLoading(false);
+  }
+};
 
   // Fetch recommendations based on tags
   const fetchRecommendations = async (tags = selectedTags, limit = 12) => {
@@ -197,33 +196,24 @@ export const RecommendationProvider = ({ children }) => {
 
   // Save user preferences
   const savePreferences = async (preferences) => {
-    if (!user) {
-      toast.warning('Please login to save preferences');
-      return false;
+  if (!user) {
+    toast.warning('Please login to save preferences');
+    return false;
+  }
+  try {
+    await api.post('/recommendations/preferences', preferences);
+    setUserPreferences(preferences);
+    if (preferences.selectedTags) {
+      setSelectedTags(preferences.selectedTags);
     }
-
-    try {
-      const token = localStorage.getItem('token');
-
-      await axios.post(
-        'http://localhost:5000/api/recommendations/preferences',
-        preferences,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setUserPreferences(preferences);
-      if (preferences.selectedTags) {
-        setSelectedTags(preferences.selectedTags);
-      }
-
-      toast.success('✨ Preferences saved successfully!');
-      return true;
-    } catch (error) {
-      console.error('Error saving preferences:', error);
-      toast.error('Failed to save preferences');
-      return false;
-    }
-  };
+    toast.success('✨ Preferences saved successfully!');
+    return true;
+  } catch (error) {
+    console.error('Error saving preferences:', error);
+    toast.error('Failed to save preferences');
+    return false;
+  }
+};
 
   // Update selected tags
   const updateSelectedTags = (tags) => {

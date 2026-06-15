@@ -22,7 +22,11 @@ const storage = multer.diskStorage({
         cb(null, 'review-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
-
+// Ensure proper integer conversion for MySQL
+const ensureInt = (value, defaultValue) => {
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? defaultValue : parsed;
+};
 const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
@@ -50,8 +54,8 @@ router.get('/', async (req, res) => {
         } = req.query;
 
         // Parse and validate limit and offset
-        const limit = Math.max(1, parseInt(req.query.limit) || 10);
-        const offset = Math.max(0, parseInt(req.query.offset) || 0);
+        const limit = parseInt(req.query.limit) || 12;
+const offset = parseInt(req.query.offset) || 0;
 
         let query = `
             SELECT 
@@ -86,9 +90,9 @@ router.get('/', async (req, res) => {
 
         // Filter by rating
         if (rating && rating !== 'all') {
-            query += ' AND r.rating >= ?';
-            params.push(parseInt(rating));
-        }
+    query += ' AND r.rating >= ?';
+    params.push(Number(rating));
+}
 
         // Sort
         switch (sort_by) {
@@ -217,7 +221,7 @@ router.get('/place/:placeId', async (req, res) => {
 
         query += ' LIMIT ? OFFSET ?';
 
-        const [reviews] = await pool.execute(query, [parseInt(placeId), limit, offset]);
+        const [reviews] = await pool.execute(query, [Number(placeId), limit, offset]);
 
         // Parse images
         const reviewsWithImages = reviews.map(review => ({

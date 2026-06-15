@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Heart, MapPin, Calendar, DollarSign, 
-  Trash2, ShoppingCart, Eye, Star 
+  Trash2, ShoppingCart, Eye, Star, Clock
 } from 'lucide-react';
 
 const WishlistCard = ({ item, onRemove, onBookNow }) => {
@@ -125,8 +125,5 @@ const WishlistCard = ({ item, onRemove, onBookNow }) => {
     </div>
   );
 };
-
-// Import Clock icon at top
-import { Clock } from 'lucide-react';
 
 export default WishlistCard;

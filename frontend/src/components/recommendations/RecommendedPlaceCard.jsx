@@ -61,7 +61,7 @@ const RecommendedPlaceCard = ({ place, showBadges = true }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await axios.post(
         'http://localhost:5000/api/recommendations/track-like',
         { placeId: place.id },
@@ -104,6 +104,7 @@ const RecommendedPlaceCard = ({ place, showBadges = true }) => {
         });
       } else {
         await addToWishlist({
+          id: place.id,
           place_id: place.id,
           place_name: place.name,
           place_image: place.image_url,
@@ -144,6 +145,7 @@ const RecommendedPlaceCard = ({ place, showBadges = true }) => {
 
     try {
       await addToCart({
+        id: place.id,
         place_id: place.id,
         place_name: place.name,
         place_image: place.image_url,

@@ -21,7 +21,7 @@ const RecommendationsWidget = () => {
   const fetchRecommendations = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
 
       // First, check if user has preferences
       try {

@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import "../styles/auth.css";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { Mail, Lock, Loader } from "lucide-react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
@@ -175,7 +174,6 @@ const LoginPage = () => {
           </div>
         </form>
       </div>
-      <ToastContainer />
     </>
   );
 };

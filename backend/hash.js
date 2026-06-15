@@ -8,7 +8,6 @@ async function hashPasswords() {
     { email: "Padmapriya@journeyhub.com", password: "padma@123" }
   ];
 
-
   for (const admin of admins) {
     const hashed = await bcrypt.hash(admin.password, 10);
     console.log(
