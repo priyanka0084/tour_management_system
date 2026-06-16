@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../services/api';
 import RecommendedPlaceCard from '../recommendations/RecommendedPlaceCard';
 import { Sparkles, ArrowRight, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -16,51 +16,40 @@ const RecommendationsPreview = () => {
   }, [user]);
 
   const fetchRecommendations = async () => {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
+    let endpoint = '/recommendations/trending?limit=3';
 
-      let endpoint = 'http://localhost:5000/api/recommendations/trending?limit=3';
-      
-      // If user is logged in and has preferences, get personalized recommendations
-      if (user) {
-        try {
-          const token = localStorage.getItem('accessToken');
-          const prefsResponse = await axios.get(
-            `http://localhost:5000/api/recommendations/preferences/${user.id}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          if (prefsResponse.data.success && prefsResponse.data.data?.selected_tags?.length > 0) {
-            const tags = prefsResponse.data.data.selected_tags.join(',');
-            endpoint = `http://localhost:5000/api/recommendations?tags=${tags}&limit=3&userId=${user.id}`;
-          }
-        } catch (error) {
-          console.log('No preferences found, showing trending places');
-        }
-      }
-
-      const response = await axios.get(endpoint);
-
-      if (response.data.success) {
-        setRecommendedPlaces(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching recommendations:', error);
-      // Fallback to trending if error occurs
+    if (user) {
       try {
-        const fallbackResponse = await axios.get(
-          'http://localhost:5000/api/recommendations/trending?limit=3'
-        );
-        if (fallbackResponse.data.success) {
-          setRecommendedPlaces(fallbackResponse.data.data);
+        const prefsResponse = await api.get(`/recommendations/preferences/${user.id}`);
+        if (prefsResponse.data.success && prefsResponse.data.data?.selected_tags?.length > 0) {
+          const tags = prefsResponse.data.data.selected_tags.join(',');
+          endpoint = `/recommendations?tags=${tags}&limit=3&userId=${user.id}`;
         }
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
+      } catch (error) {
+        console.log('No preferences found, showing trending places');
       }
-    } finally {
-      setLoading(false);
     }
-  };
+
+    const response = await api.get(endpoint);
+    if (response.data.success) {
+      setRecommendedPlaces(response.data.data);
+    }
+  } catch (error) {
+    console.error('Error fetching recommendations:', error);
+    try {
+      const fallbackResponse = await api.get('/recommendations/trending?limit=3');
+      if (fallbackResponse.data.success) {
+        setRecommendedPlaces(fallbackResponse.data.data);
+      }
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleViewAll = () => {
     navigate('/recommendations');

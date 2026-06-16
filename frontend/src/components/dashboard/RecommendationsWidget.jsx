@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../services/api';
 import { Sparkles, ArrowRight, TrendingUp, MapPin, Star, Heart } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -19,58 +19,40 @@ const RecommendationsWidget = () => {
   }, [user]);
 
   const fetchRecommendations = async () => {
+  try {
+    setLoading(true);
+
     try {
-      setLoading(true);
-      const token = localStorage.getItem('accessToken');
+      const prefsResponse = await api.get(`/recommendations/preferences/${user.id}`);
 
-      // First, check if user has preferences
-      try {
-        const prefsResponse = await axios.get(
-          `http://localhost:5000/api/recommendations/preferences/${user.id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (prefsResponse.data.success && prefsResponse.data.data?.selected_tags?.length > 0) {
-          setHasPreferences(true);
-          const tags = prefsResponse.data.data.selected_tags.join(',');
-          
-          // Get personalized recommendations
-          const recsResponse = await axios.get(
-            `http://localhost:5000/api/recommendations?tags=${tags}&limit=4&userId=${user.id}`
-          );
-
-          if (recsResponse.data.success) {
-            setRecommendations(recsResponse.data.data);
-          }
-        } else {
-          // No preferences, show trending
-          setHasPreferences(false);
-          const trendingResponse = await axios.get(
-            'http://localhost:5000/api/recommendations/trending?limit=4'
-          );
-
-          if (trendingResponse.data.success) {
-            setRecommendations(trendingResponse.data.data);
-          }
+      if (prefsResponse.data.success && prefsResponse.data.data?.selected_tags?.length > 0) {
+        setHasPreferences(true);
+        const tags = prefsResponse.data.data.selected_tags.join(',');
+        const recsResponse = await api.get(`/recommendations?tags=${tags}&limit=4&userId=${user.id}`);
+        if (recsResponse.data.success) {
+          setRecommendations(recsResponse.data.data);
         }
-      } catch (error) {
-        // If preferences endpoint fails, fallback to trending
+      } else {
         setHasPreferences(false);
-        const trendingResponse = await axios.get(
-          'http://localhost:5000/api/recommendations/trending?limit=4'
-        );
-
+        const trendingResponse = await api.get('/recommendations/trending?limit=4');
         if (trendingResponse.data.success) {
           setRecommendations(trendingResponse.data.data);
         }
       }
     } catch (error) {
-      console.error('Error fetching recommendations:', error);
-      toast.error('Failed to load recommendations');
-    } finally {
-      setLoading(false);
+      setHasPreferences(false);
+      const trendingResponse = await api.get('/recommendations/trending?limit=4');
+      if (trendingResponse.data.success) {
+        setRecommendations(trendingResponse.data.data);
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error fetching recommendations:', error);
+    toast.error('Failed to load recommendations');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleViewAll = () => {
     navigate('/recommendations');
