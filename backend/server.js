@@ -34,7 +34,7 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production'
-        ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['https://yourdomain.com', 'https://www.yourdomain.com'])
+        ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['https://yourdomain.com', 'https://www.yourdomain.com','https://tour-management-system-1f2x.vercel.app'])
         : ['http://localhost:5173', 'http://localhost:5174','http://localhost:5175', 'http://localhost:3000', 'http://localhost:5176'],
     credentials: true,
     optionsSuccessStatus: 200
